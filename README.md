@@ -18,9 +18,9 @@
       2) [http://127.0.0.1:8080/user/login](#requests_user_login);
       3) [http://127.0.0.1:8080/user/sendEmailCode](#requests_user_send_email_code);
       4) [http://127.0.0.1:8080/user/verifyEmailCode](#requests_user_verify_email_code).
-4. [Структура базы данных](#):
-   1) [Users](#)
-   2) [UsersEmailCodes](#)
+4. [Структура базы данных](#database_structure):
+   1) [Users](#database_structure_users)
+   2) [UsersEmailCodes](#database_structure_users_email_codes)
 
 ## Аргументы запросов <a name="requests_arguments"></a>
 ### Пользователь <a name="requests_arguments_user"></a>
@@ -126,11 +126,18 @@ Response<Type>(
 <br> Описание: Проверяет вводимый код верификации почты и возврщает результат.
 <br> `code = 200`: Код верификации правильный.
 <br> `code ≠ 200`: Код верификации неправильный.
-## Структура базы данных
-+ Users
-<br> |id|email|password|nickname|avatar|date_of_birth|rating|events|
-|-|-|-|
-|1|email@email.com|password|nickname|C:\avatar.jpg|0000-01-01|0|[]|
-+ UsersEmailCodes
-<br> |id|email|code|expiration_time|
-|1|email@email.com|000000|123213812312|
+## Структура базы данных <a name="database_structure"></a>
++ Users <a name="database_structure_users"></a>
+<br> id `integer`
+<br> email `text`
+<br> password `text`
+<br> nickname `text`
+<br> avatar `text`
+<br> date_of_birth `date`
+<br> rating `real`
+<br> events `integer[]`
++ UsersEmailCodes <a name="database_structure_users_email_codes"></a>
+<br> id `integer`
+<br> email `text`
+<br> code `varchar(6)`
+<br> expiration_time `bigint`
