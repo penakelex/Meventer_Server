@@ -43,6 +43,6 @@ dependencies {
     implementation("io.insert-koin:koin-core:$koin_version")
     implementation("io.insert-koin:koin-ktor:$koin_version")
     implementation("com.sun.mail:jakarta.mail:$jakarta_version")
-    testImplementation("io.ktor:ktor-server-tests-jvm")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+    //testImplementation("io.ktor:ktor-server-tests-jvm")
+    //testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }
