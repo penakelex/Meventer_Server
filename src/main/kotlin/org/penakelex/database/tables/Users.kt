@@ -1,18 +1,19 @@
 package org.penakelex.database.tables
 
-import org.jetbrains.exposed.sql.IntegerColumnType
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.UIntegerColumnType
+import org.jetbrains.exposed.sql.javatime.date
 import org.penakelex.database.extenstions.array
-import org.penakelex.database.extenstions.date
 
-object Users : Table() {
-    val id = integer("id").autoIncrement()
+/**
+ * Users table object
+ * */
+object Users : IntIdTable() {
     val email = text("email")
     val password = text("password")
     val nickname = text("nickname")
-    val avatar = text("avatar")
+    val avatar = text("avatar").default("")
     val date_of_birth = date("date_of_birth")
     val rating = float("rating").default(0f)
-    val events = array<Int>("events", IntegerColumnType()).default(arrayOf())
-    override val primaryKey = PrimaryKey(id)
+    val events = array<UInt>("events", UIntegerColumnType()).default(arrayOf())
 }
