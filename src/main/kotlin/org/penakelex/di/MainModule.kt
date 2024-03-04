@@ -7,9 +7,12 @@ import jakarta.mail.PasswordAuthentication
 import org.jetbrains.exposed.sql.Database
 import org.koin.dsl.module
 import org.penakelex.database.services.Service
+import org.penakelex.database.services.events.EventsServiceImplementation
 import org.penakelex.database.services.users.UsersServiceImplementation
 import org.penakelex.database.services.usersEmailCodes.UsersEmailCodesServiceImplementation
+import org.penakelex.fileSystem.FileManager
 import org.penakelex.routes.Controller
+import org.penakelex.routes.event.EventsControllerImplementation
 import org.penakelex.routes.user.UsersControllerImplementation
 import org.penakelex.session.JWTValues
 import org.penakelex.session.UserEmailValues
@@ -38,8 +41,11 @@ val mainModule = module {
     }
     single<Service> {
         Service(
-            usersService = UsersServiceImplementation(),
+            usersService = UsersServiceImplementation(
+                basicAvatar = "Аватарка.jpg"
+            ),
             usersEmailCodesService = UsersEmailCodesServiceImplementation(),
+            eventsService = EventsServiceImplementation(),
             database = get()
         )
     }
@@ -75,6 +81,12 @@ val mainModule = module {
                 properties = get(),
                 userEmailValues = get(),
                 authenticator = get()
+            ),
+            eventsController = EventsControllerImplementation(
+                service = get(),
+                fileManager = FileManager(
+                    directory = config.property("file.directory").getString()
+                )
             )
         )
     }

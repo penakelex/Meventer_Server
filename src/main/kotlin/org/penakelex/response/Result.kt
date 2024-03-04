@@ -38,12 +38,32 @@ enum class Result(
         HttpStatusCode.Conflict.value.toUShort(),
         "Verification code is incorrect"
     ),
-    /*VERIFICATION_CODE_SENDING_FAILED(
-        HttpStatusCode.ExpectationFailed.value.toUShort(),
-        "Verification code sending failed"
-    ),*/
     SENDING_VERIFICATION_CODE_STARTED(
         HttpStatusCode.OK.value.toUShort(),
         "Verification code sending started"
     ),
+    EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Events for user with such ID not found"
+    ),
+    EMPTY_FORM_ITEM_OF_MULTI_PART_DATA(
+        HttpStatusCode.ExpectationFailed.value.toUShort(),
+        "Empty form item of multi part data"
+    ),
+    FEATURED_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Featured events for user with such ID not found"
+    ),
+    ORGANIZER_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Events where user with such ID is organizer not found"
+    ),
+    PARTICIPANT_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Events where user with such ID is participant not found"
+    ),
+    UNRESOLVED_EVENT_TYPE(
+        HttpStatusCode.Conflict.value.toUShort(),
+        "Unresolved event type"
+    )
 }

@@ -1,6 +1,10 @@
+@file:UseSerializers(LocalDateSerializer::class)
 package org.penakelex.database.models
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
+import org.penakelex.database.extenstions.LocalDateSerializer
+import java.time.LocalDate
 
 /**
  * Data transfer object for user registration
@@ -31,4 +35,13 @@ data class UserRegister(
 data class UserLogin(
     val email: String,
     val password: String
+)
+
+@Serializable
+data class User(
+    val id: Int,
+    val email: String,
+    val avatar: String,
+    val dateOfBirth: LocalDate,
+    val rating: Float
 )

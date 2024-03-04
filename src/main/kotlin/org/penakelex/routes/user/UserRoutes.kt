@@ -2,11 +2,11 @@ package org.penakelex.routes.user
 
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
-import org.penakelex.routes.Controller
 
-fun Route.userRoutes(controller: Controller) {
-    post("/user/register") { controller.usersController.registerUser(call) }
-    post("/user/login") { controller.usersController.loginUser(call) }
-    post("/user/sendEmailCode") { controller.usersController.sendEmailCode(call) }
-    post("/user/verifyEmailCode") { controller.usersController.verifyEmailCode(call) }
+fun Route.userRoutes(controller: UsersController) {
+    post("/user/register") { controller.registerUser(call) }
+    post("/user/login") { controller.loginUser(call) }
+    post("/user/sendEmailCode") { controller.sendEmailCode(call) }
+    post("/user/verifyEmailCode") { controller.verifyEmailCode(call) }
+    post("/user/getData") { controller.getUserData(call) }
 }

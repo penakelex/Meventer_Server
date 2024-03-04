@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import org.koin.ktor.ext.inject
 import org.penakelex.database.services.Service
 import org.penakelex.response.Result
+import org.penakelex.response.toResultResponse
 import org.penakelex.session.JWTValues
 import org.penakelex.session.getAlgorithm
 import org.penakelex.session.PASSWORD
@@ -35,7 +36,7 @@ fun Application.configureSecurity() {
                 if (isTokenNotExpired && isTokenValid) JWTPrincipal(jwtCredential.payload)
                 else null
             }
-            challenge { _, _ -> call.respond(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED) }
+            challenge { _, _ -> call.respond(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED.toResultResponse()) }
         }
     }
 }
