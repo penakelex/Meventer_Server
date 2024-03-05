@@ -23,10 +23,10 @@ class EventsControllerImplementation(
 ) : EventsController {
     override suspend fun createEvent(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
-        val images = fileManager.uploadFile(multiPartData.filterIsInstance<PartData.FileItem>())
         val event: EventCreate = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.let {
             Json.decodeFromString(it.value)
         } ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResultResponse())
+        val images = fileManager.uploadFile(multiPartData.filterIsInstance<PartData.FileItem>())
         call.respond(
             service.eventsService.insertEvent(event = event, images = images).toResultResponse()
         )
