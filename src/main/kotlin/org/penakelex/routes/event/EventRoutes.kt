@@ -12,7 +12,7 @@ fun Route.eventRoutes(controller: EventsController) = route("/event") {
         post("/user") { controller.getUserEvents(call) }
         post("/addParticipant") { controller.addParticipantToEvent(call) }
         post("/addOrganizer") { controller.addOrganizerToEvent(call) }
-        post("/addInFavourites") { controller.addEventInFavourites(call) }
+        post("/addInFavourites") { controller.inFeaturedEventChange(call) }
         post("/update") { controller.updateEvent(call) }
         post("/delete") { controller.deleteEvent(call) }
     }

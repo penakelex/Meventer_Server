@@ -26,15 +26,20 @@ class EventsServiceImplementation : TableService(), EventsService {
             if (event.minimalAge != null) it[minimal_age] = event.minimalAge
             it[maximal_age] = event.maximalAge
             if (event.price != null) it[price] = event.price
-            it[organizers] = event.organizers.toTypedArray()
         }.also {
             println("${it[Events.id]} - идентификатор события")
         }
         return@databaseQuery Result.OK
     }
 
-    override suspend fun updateEvent(event: EventUpdate, originatorID: Int): Result = databaseQuery {
-        Events.update({ Events.id.eq(event.eventID) and Events.originator.eq(originatorID) }) {
+    override suspend fun updateEvent(event: EventUpdate, organizerID: Int): Result = databaseQuery {
+        Events.update(
+            where = {
+                Events.id.eq(event.eventID) and (
+                        Events.originator.eq(organizerID) or Events.organizers.any(organizerID)
+                )
+            }
+        ) {
             if (event.name != null) it[name] = event.name
             if (event.description != null) it[description] = event.description
             if (event.startTime != null) it[start_time] = event.startTime
@@ -129,10 +134,16 @@ class EventsServiceImplementation : TableService(), EventsService {
     }
 
     override suspend fun addParticipantToEvent(userID: Int, eventID: Int): Result = databaseQuery {
-        val (participants, eventRequirements) = Events.select { Events.id.eq(eventID) }.singleOrNull()?.let {
-            it[Events.participants] to EventRequirements(
-                minimalAge = it[Events.minimal_age],
-                maximalAge = it[Events.maximal_age]
+        val (participants, organizers, eventRequirements) = Events.select {
+            Events.id.eq(eventID)
+        }.singleOrNull()?.let {
+            Triple(
+                it[Events.participants],
+                it[Events.organizers],
+                EventRequirements(
+                    minimalAge = it[Events.minimal_age],
+                    maximalAge = it[Events.maximal_age]
+                )
             )
         } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
         val userAge = Users.select { Users.id.eq(userID) }.singleOrNull()?.let {
@@ -147,21 +158,33 @@ class EventsServiceImplementation : TableService(), EventsService {
         if (userAge !in eventRequirements.minimalAge..(eventRequirements.maximalAge ?: Short.MAX_VALUE)) {
             return@databaseQuery Result.YOUR_AGE_DOES_NOT_MATCH_THE_REQUIRED_BY_THE_EVENT_ORGANIZERS
         }
-        Events.update {
+        Events.update({ Events.id.eq(eventID) }) {
             it[Events.participants] = participants.plus(userID).sortedArray()
+            if (userID in organizers) {
+                it[Events.organizers] = organizers.filter { id -> id != userID }.toTypedArray()
+            }
         }
         return@databaseQuery Result.OK
     }
 
     override suspend fun addOrganizerToEvent(adderID: Int, organizer: EventOrganizer): Result = databaseQuery {
-        val organizers = Events.select { Events.id.eq(organizer.eventID) }.singleOrNull()?.let {
-            it[Events.organizers]
+        val (organizers, participants, originatorID) = Events.select {
+            Events.id.eq(organizer.eventID)
+        }.singleOrNull()?.let {
+            Triple(
+                it[Events.organizers],
+                it[Events.participants],
+                it[Events.originator]
+            )
         } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
-        if (adderID !in organizers) return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_EVENT
+        if (adderID != originatorID) return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_EVENT
         Users.select { Users.id.eq(organizer.addingID) }.singleOrNull()
             ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
-        Events.update({ Events.id.eq(organizer.eventID) }) {
+        Events.update({ Events.id.eq(organizer.eventID) and Events.originator.eq(adderID) }) {
             it[Events.organizers] = organizers.plus(organizer.addingID).sortedArray()
+            if (organizer.addingID in participants) {
+                it[Events.participants] = participants.filter { id -> id != organizer.addingID }.toTypedArray()
+            }
         }
         return@databaseQuery Result.OK
     }

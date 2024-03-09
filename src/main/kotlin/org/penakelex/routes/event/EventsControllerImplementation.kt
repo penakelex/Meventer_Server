@@ -37,7 +37,7 @@ class EventsControllerImplementation(
     override suspend fun updateEvent(call: ApplicationCall) = call.respond(
         service.eventsService.updateEvent(
             event = call.receive<EventUpdate>(),
-            originatorID = call.getIntJWTPrincipalClaim(USER_ID)
+            organizerID = call.getIntJWTPrincipalClaim(USER_ID)
         ).toResultResponse()
     )
 
@@ -72,7 +72,7 @@ class EventsControllerImplementation(
         ).toResultResponse()
     )
 
-    override suspend fun addEventInFavourites(call: ApplicationCall) = call.respond(
+    override suspend fun inFeaturedEventChange(call: ApplicationCall) = call.respond(
         service.eventsService.addEventInFavourites(
             userID = call.getIntJWTPrincipalClaim(USER_ID),
             eventID = call.receive<Int>()

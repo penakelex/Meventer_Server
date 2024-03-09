@@ -55,21 +55,33 @@ class UsersControllerImplementation(
         call.respond(Result.OK.toResultResponse())
 
     override suspend fun verifyEmailCode(call: ApplicationCall) = call.respond(
-        service.usersEmailCodesService.verifyCode(call.receive<UserEmailCode>()).toResultResponse()
+        service.usersEmailCodesService.verifyCode(
+            call.receive<UserEmailCode>()
+        ).toResultResponse()
     )
 
     override suspend fun registerUser(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
         val user: UserRegister = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.let {
             Json.decodeFromString(it.value)
-        } ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResponse())
-        val images = fileManager.uploadFile(multiPartData.filterIsInstance<PartData.FileItem>())
-        if (images.size > 1) return call.respond(Result.USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR.toResponse())
+        } ?: return call.respond(
+            Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResponse()
+        )
+        val images = fileManager.uploadFile(
+            fileItems = multiPartData.filterIsInstance<PartData.FileItem>()
+        )
+        if (images.size > 1) return call.respond(
+            Result.USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR.toResponse()
+        )
         val codeVerificationResult = service.usersEmailCodesService.verifyAndDeleteCode(
             email = user.email, code = user.code
         )
-        if (codeVerificationResult != Result.OK) return call.respond(codeVerificationResult.toResponse())
-        val (insertionResult, userID) = service.usersService.insertNewUser(user = user, avatar = images.singleOrNull())
+        if (codeVerificationResult != Result.OK) return call.respond(
+            codeVerificationResult.toResponse()
+        )
+        val (insertionResult, userID) = service.usersService.insertNewUser(
+            user = user, avatar = images.singleOrNull()
+        )
         if (userID == null) return call.respond(insertionResult.toResponse())
         call.respond(
             Pair(

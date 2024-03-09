@@ -18,6 +18,7 @@ object Events : IntIdTable("events") {
     val participants = array<Int>("participants", IntegerColumnType())
         .default(arrayOf())
     val organizers = array<Int>("organizers", IntegerColumnType())
+        .default(arrayOf())
     val in_favourites = array<Int>("in_favourites", IntegerColumnType())
         .default(arrayOf())
 }

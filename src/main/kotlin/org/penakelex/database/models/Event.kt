@@ -27,8 +27,7 @@ data class EventCreate(
     val startTime: Instant,
     val minimalAge: Short?,
     val maximalAge: Short?,
-    val price: Int?,
-    val organizers: List<Int>
+    val price: Int?
 )
 
 @Serializable
@@ -37,7 +36,7 @@ data class EventSelection(
     val age: Short?,
     val minimalPrice: Int?,
     val maximalPrice: Int?,
-    val sortBy: String
+    val sortBy: String?
 ) {
     enum class SortingStates(val state: String) {
         NEAREST_ONES_FIRST("Nearest ones first"),
