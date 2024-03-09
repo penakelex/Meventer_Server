@@ -65,5 +65,37 @@ enum class Result(
     UNRESOLVED_EVENT_TYPE(
         HttpStatusCode.Conflict.value.toUShort(),
         "Unresolved event type"
+    ),
+    EVENT_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Event with such ID not found"
+    ),
+    YOU_CAN_NOT_MANAGE_THIS_EVENT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You can`t manage this event"
+    ),
+    YOU_CAN_NOT_FEEDBACK_YOURSELF(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You can`t feedback yourself"
+    ),
+    FEEDBACKS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Feedbacks for user with such ID not found"
+    ),
+    YOUR_AGE_DOES_NOT_MATCH_THE_REQUIRED_BY_THE_EVENT_ORGANIZERS(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "Your age doesn`t match the required by the event organizers"
+    ),
+    USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "User can`t have more than one avatar"
+    ),
+    EMPTY_FILENAME(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Empty filename"
+    ),
+    EMPTY_EVENT_ID(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Empty event ID"
     )
 }

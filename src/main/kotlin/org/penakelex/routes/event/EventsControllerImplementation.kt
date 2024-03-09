@@ -2,18 +2,16 @@ package org.penakelex.routes.event
 
 import io.ktor.http.content.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import kotlinx.serialization.json.Json
-import org.penakelex.database.models.EventCreate
-import org.penakelex.database.models.EventSelection
+import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
 import org.penakelex.fileSystem.FileManager
 import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
+import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
 import org.penakelex.session.USER_ID
 
 class EventsControllerImplementation(
@@ -23,21 +21,70 @@ class EventsControllerImplementation(
 ) : EventsController {
     override suspend fun createEvent(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
-        val images = fileManager.uploadFile(multiPartData.filterIsInstance<PartData.FileItem>())
         val event: EventCreate = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.let {
             Json.decodeFromString(it.value)
         } ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResultResponse())
+        val images = fileManager.uploadFile(multiPartData.filterIsInstance<PartData.FileItem>())
         call.respond(
-            service.eventsService.insertEvent(event = event, images = images).toResultResponse()
+            service.eventsService.insertEvent(
+                event = event,
+                originatorID = call.getIntJWTPrincipalClaim(USER_ID),
+                images = images
+            ).toResultResponse()
         )
     }
 
+    override suspend fun updateEvent(call: ApplicationCall) = call.respond(
+        service.eventsService.updateEvent(
+            event = call.receive<EventUpdate>(),
+            originatorID = call.getIntJWTPrincipalClaim(USER_ID)
+        ).toResultResponse()
+    )
+
+    override suspend fun deleteEvent(call: ApplicationCall) = call.respond(
+        service.eventsService.deleteEvent(
+            eventID = call.receive<Int>(),
+            originatorID = call.getIntJWTPrincipalClaim(USER_ID)
+        ).toResultResponse()
+    )
+
+    override suspend fun getEvent(call: ApplicationCall) {
+        val eventID = call.parameters["eventID"]?.toIntOrNull()
+            ?: return call.respond(Result.EMPTY_EVENT_ID.toResponse())
+        call.respond(
+            service.eventsService.getEvent(
+                eventID = eventID
+            ).toResponse()
+        )
+    }
+
+    override suspend fun addParticipantToEvent(call: ApplicationCall) = call.respond(
+        service.eventsService.addParticipantToEvent(
+            userID = call.getIntJWTPrincipalClaim(USER_ID),
+            eventID = call.receive<Int>()
+        ).toResultResponse()
+    )
+
+    override suspend fun addOrganizerToEvent(call: ApplicationCall) = call.respond(
+        service.eventsService.addOrganizerToEvent(
+            adderID = call.getIntJWTPrincipalClaim(USER_ID),
+            organizer = call.receive<EventOrganizer>()
+        ).toResultResponse()
+    )
+
+    override suspend fun addEventInFavourites(call: ApplicationCall) = call.respond(
+        service.eventsService.addEventInFavourites(
+            userID = call.getIntJWTPrincipalClaim(USER_ID),
+            eventID = call.receive<Int>()
+        ).toResultResponse()
+    )
+
     override suspend fun getUserEvents(call: ApplicationCall) {
-        val id = call.parameters["id"]?.toIntOrNull()
-            ?: call.principal<JWTPrincipal>()!!.payload.getClaim(USER_ID).asInt()
-        val actual = call.parameters["actual"].toBoolean()
-        val aforetime = call.parameters["aforetime"].toBoolean()
-        val getResponse = when (call.parameters["type"] ?: "") {
+        val eventsGet = call.receive<EventsGet>()
+        val id = eventsGet.userID ?: call.getIntJWTPrincipalClaim(USER_ID)
+        val actual = eventsGet.actual ?: false
+        val aforetime = eventsGet.aforetime ?: false
+        val gettingResponse = when (eventsGet.type ?: "") {
             EventsType.All.type -> {
                 service.eventsService.getUserEvents(id, actual, aforetime)
             }
@@ -56,7 +103,7 @@ class EventsControllerImplementation(
 
             else -> Result.UNRESOLVED_EVENT_TYPE to null
         }
-        call.respond(getResponse.toResponse())
+        call.respond(gettingResponse.toResponse())
     }
 
     override suspend fun getGlobalEvents(call: ApplicationCall) = call.respond(

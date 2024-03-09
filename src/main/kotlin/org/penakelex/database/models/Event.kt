@@ -16,7 +16,6 @@ data class Event(
     val startTime: Instant,
     val minimalAge: Short,
     val maximalAge: Short?,
-    val minimalRating: Float,
     val price: Int,
     val organizers: List<Int>
 )
@@ -28,7 +27,6 @@ data class EventCreate(
     val startTime: Instant,
     val minimalAge: Short?,
     val maximalAge: Short?,
-    val minimalRating: Float?,
     val price: Int?,
     val organizers: List<Int>
 )
@@ -37,7 +35,6 @@ data class EventCreate(
 data class EventSelection(
     val tags: List<String>?,
     val age: Short?,
-    val rating: Float?,
     val minimalPrice: Int?,
     val maximalPrice: Int?,
     val sortBy: String
@@ -47,3 +44,33 @@ data class EventSelection(
         FURTHER_ONES_FIRST("Further ones first")
     }
 }
+
+@Serializable
+data class EventOrganizer(
+    val eventID: Int,
+    val addingID: Int
+)
+
+@Serializable
+data class EventsGet(
+    val userID: Int?,
+    val actual: Boolean?,
+    val aforetime: Boolean?,
+    val type: String?
+)
+
+@Serializable
+data class EventUpdate(
+    val eventID: Int,
+    val name: String?,
+    val description: String?,
+    val startTime: Instant?,
+    val minimalAge: Short?,
+    val maximalAge: Short?,
+    val price: Int?
+)
+
+data class EventRequirements(
+    val minimalAge: Short,
+    val maximalAge: Short?
+)

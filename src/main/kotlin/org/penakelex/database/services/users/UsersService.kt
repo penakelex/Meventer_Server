@@ -23,7 +23,7 @@ interface UsersService {
      * @return if email isn`t free [Result.USER_WITH_SUCH_EMAIL_ALREADY_EXISTS] to null else [Result.OK] to
      * user ID from database
      * */
-    suspend fun insertNewUser(user: UserRegister): Pair<Result, Int?>
+    suspend fun insertNewUser(user: UserRegister, avatar: String?): Pair<Result, Int?>
     suspend fun getUserData(id: Int): Pair<Result, User?>
 
     /**

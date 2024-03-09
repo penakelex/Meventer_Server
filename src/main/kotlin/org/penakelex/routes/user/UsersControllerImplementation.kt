@@ -1,27 +1,25 @@
 package org.penakelex.routes.user
 
+import io.ktor.http.content.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import jakarta.mail.Authenticator
-import jakarta.mail.Message
-import jakarta.mail.MessagingException
-import jakarta.mail.Session
-import jakarta.mail.Transport
+import jakarta.mail.*
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
+import kotlinx.serialization.json.Json
 import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
+import org.penakelex.fileSystem.FileManager
 import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
+import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
 import org.penakelex.session.JWTValues
 import org.penakelex.session.USER_ID
 import org.penakelex.session.UserEmailValues
 import org.penakelex.session.generateToken
-import java.util.Properties
+import java.util.*
 
 
 class UsersControllerImplementation(
@@ -29,7 +27,8 @@ class UsersControllerImplementation(
     private val valuesJWT: JWTValues,
     private val properties: Properties,
     private val userEmailValues: UserEmailValues,
-    private val authenticator: Authenticator
+    private val authenticator: Authenticator,
+    private val fileManager: FileManager
 ) : UsersController {
     override suspend fun sendEmailCode(call: ApplicationCall) {
         val userEmail = call.receive<UserEmail>()
@@ -60,12 +59,17 @@ class UsersControllerImplementation(
     )
 
     override suspend fun registerUser(call: ApplicationCall) {
-        val user = call.receive<UserRegister>()
+        val multiPartData = call.receiveMultipart().readAllParts()
+        val user: UserRegister = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.let {
+            Json.decodeFromString(it.value)
+        } ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResponse())
+        val images = fileManager.uploadFile(multiPartData.filterIsInstance<PartData.FileItem>())
+        if (images.size > 1) return call.respond(Result.USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR.toResponse())
         val codeVerificationResult = service.usersEmailCodesService.verifyAndDeleteCode(
             email = user.email, code = user.code
         )
         if (codeVerificationResult != Result.OK) return call.respond(codeVerificationResult.toResponse())
-        val (insertionResult, userID) = service.usersService.insertNewUser(user)
+        val (insertionResult, userID) = service.usersService.insertNewUser(user = user, avatar = images.singleOrNull())
         if (userID == null) return call.respond(insertionResult.toResponse())
         call.respond(
             Pair(
@@ -73,7 +77,6 @@ class UsersControllerImplementation(
                 second = generateToken(valuesJWT, userID, user.password)
             ).toResponse()
         )
-
     }
 
 
@@ -90,8 +93,23 @@ class UsersControllerImplementation(
     }
 
     override suspend fun getUserData(call: ApplicationCall) {
-        val id = call.parameters["id"]?.toIntOrNull()
-            ?: call.principal<JWTPrincipal>()!!.payload.getClaim(USER_ID).asInt()
+        val id = call.receive<NullableUserID>().id
+            ?: call.getIntJWTPrincipalClaim(USER_ID)
         call.respond(service.usersService.getUserData(id).toResponse())
+    }
+
+    override suspend fun createFeedback(call: ApplicationCall) = call.respond(
+        service.usersFeedbackService.insertFeedback(
+            fromUserID = call.getIntJWTPrincipalClaim(USER_ID),
+            feedback = call.receive<UserFeedbackCreate>()
+        ).toResultResponse()
+    )
+
+    override suspend fun getFeedbackToUser(call: ApplicationCall) {
+        val id = call.receive<NullableUserID>().id
+            ?: call.getIntJWTPrincipalClaim(USER_ID)
+        call.respond(
+            service.usersFeedbackService.getAllFeedbackToUser(id = id).toResponse()
+        )
     }
 }

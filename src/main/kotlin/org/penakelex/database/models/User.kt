@@ -12,7 +12,6 @@ import java.time.LocalDate
  * @property email user email
  * @property password user password
  * @property nickname user nickname
- * @property avatar file path to the picture
  * @property dateOfBirth date of birth user
  * */
 @Serializable
@@ -20,11 +19,10 @@ data class UserRegister(
     val code: String,
     val email: String,
     val password: String,
-    val nickname: String,
-    val avatar: String?,
+    val nickname: String?,
+    val name: String,
     val dateOfBirth: String,
 )
-
 
 /**
  * Data transfer object for user login
@@ -42,6 +40,10 @@ data class User(
     val id: Int,
     val email: String,
     val avatar: String,
-    val dateOfBirth: LocalDate,
-    val rating: Float
+    val dateOfBirth: LocalDate
+)
+
+@Serializable
+data class NullableUserID(
+    val id: Int?
 )

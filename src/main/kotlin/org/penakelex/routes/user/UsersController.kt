@@ -9,4 +9,6 @@ interface UsersController {
     suspend fun registerUser(call: ApplicationCall)
     suspend fun loginUser(call: ApplicationCall)
     suspend fun getUserData(call: ApplicationCall)
+    suspend fun createFeedback(call: ApplicationCall)
+    suspend fun getFeedbackToUser(call: ApplicationCall)
 }

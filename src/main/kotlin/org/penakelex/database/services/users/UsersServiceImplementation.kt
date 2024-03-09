@@ -9,11 +9,12 @@ import org.penakelex.database.models.UserLogin
 import org.penakelex.database.models.UserRegister
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Users
+import org.penakelex.ecnryption.cipher
+import org.penakelex.ecnryption.unCipher
 import org.penakelex.response.Result
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
-
+import java.util.*
 
 /**
  * Users table service implementation
@@ -28,14 +29,15 @@ class UsersServiceImplementation(
         return@databaseQuery Result.USER_WITH_SUCH_EMAIL_ALREADY_EXISTS
     }
 
-    override suspend fun insertNewUser(user: UserRegister): Pair<Result, Int?> = databaseQuery {
+    override suspend fun insertNewUser(user: UserRegister, avatar: String?): Pair<Result, Int?> = databaseQuery {
         val checkResult = checkIfEmailIsTaken(user.email)
         if (checkResult != Result.OK) return@databaseQuery checkResult to null
         return@databaseQuery Result.OK to Users.insertIgnoreAndGetId {
             it[email] = user.email
-            it[password] = user.password
-            it[nickname] = user.nickname
-            it[avatar] = user.avatar ?: basicAvatar
+            it[password] = user.password.cipher()
+            it[name] = user.name
+            it[nickname] = user.nickname ?: UUID.randomUUID().toString()
+            it[Users.avatar] = avatar ?: basicAvatar
             it[date_of_birth] = LocalDate.parse(
                 user.dateOfBirth, DateTimeFormatter.ofPattern(Date_Pattern)
             )
@@ -48,8 +50,7 @@ class UsersServiceImplementation(
                 id = it[Users.id].value,
                 email = it[Users.email],
                 avatar = it[Users.avatar],
-                dateOfBirth = it[Users.date_of_birth],
-                rating = it[Users.rating]
+                dateOfBirth = it[Users.date_of_birth]
             )
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         return@databaseQuery Result.OK to user
@@ -61,7 +62,7 @@ class UsersServiceImplementation(
         }.singleOrNull()?.let {
             it[Users.id] to it[Users.password]
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_EMAIL to null
-        if (passwordFromDatabase != user.password) {
+        if (passwordFromDatabase.unCipher() != user.password) {
             return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH to null
         }
         return@databaseQuery Result.OK to id.value
@@ -73,7 +74,7 @@ class UsersServiceImplementation(
         }.singleOrNull()?.let {
             it[Users.password]
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
-        if (userPasswordFromDatabase != password) {
+        if (userPasswordFromDatabase.unCipher() != password) {
             return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH
         }
         return@databaseQuery Result.OK

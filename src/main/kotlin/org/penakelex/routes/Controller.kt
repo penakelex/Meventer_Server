@@ -1,6 +1,7 @@
 package org.penakelex.routes
 
 import org.penakelex.routes.event.EventsController
+import org.penakelex.routes.file.FilesController
 import org.penakelex.routes.user.UsersController
 
 /**
@@ -8,5 +9,6 @@ import org.penakelex.routes.user.UsersController
  * */
 data class Controller(
     val usersController: UsersController,
-    val eventsController: EventsController
+    val eventsController: EventsController,
+    val filesController: FilesController
 )

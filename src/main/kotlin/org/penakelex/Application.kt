@@ -6,7 +6,6 @@ import org.penakelex.plugins.*
 fun main(args: Array<String>) =
     io.ktor.server.netty.EngineMain.main(args)
 
-
 fun Application.module() {
     configureDI()
     configureCleaning()
