@@ -51,14 +51,14 @@ class UsersControllerImplementation(
         service.usersEmailCodesService.insertCode(email = userEmail, code = code)
     }
 
-    override suspend fun verifyToken(call: ApplicationCall) =
-        call.respond(Result.OK.toResultResponse())
-
     override suspend fun verifyEmailCode(call: ApplicationCall) = call.respond(
         service.usersEmailCodesService.verifyCode(
             call.receive<UserEmailCode>()
         ).toResultResponse()
     )
+
+    override suspend fun verifyToken(call: ApplicationCall) =
+        call.respond(Result.OK.toResultResponse())
 
     override suspend fun registerUser(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()

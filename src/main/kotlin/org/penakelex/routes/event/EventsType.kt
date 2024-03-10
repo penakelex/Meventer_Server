@@ -5,4 +5,5 @@ enum class EventsType(val type: String) {
     Participant("participant"),
     Organizer("organizer"),
     Featured("featured")
+    //TODO: Add Originator type and request
 }

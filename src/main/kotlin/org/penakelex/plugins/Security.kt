@@ -10,9 +10,9 @@ import org.penakelex.database.services.Service
 import org.penakelex.response.Result
 import org.penakelex.response.toResultResponse
 import org.penakelex.session.JWTValues
-import org.penakelex.session.getAlgorithm
 import org.penakelex.session.PASSWORD
 import org.penakelex.session.USER_ID
+import org.penakelex.session.getAlgorithm
 
 fun Application.configureSecurity() {
     val service by inject<Service>()
@@ -32,6 +32,7 @@ fun Application.configureSecurity() {
                     jwtCredential.payload.getClaim(USER_ID).asInt() ?: return@validate null,
                     jwtCredential.payload.getClaim(PASSWORD).asString() ?: return@validate null
                 ) == Result.OK
+                //TODO: Сделать проверку на срок действия раньше базы данных
                 val isTokenNotExpired = jwtCredential.payload.expiresAt.time > System.currentTimeMillis()
                 if (isTokenNotExpired && isTokenValid) JWTPrincipal(jwtCredential.payload)
                 else null

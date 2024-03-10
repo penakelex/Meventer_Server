@@ -21,6 +21,7 @@ data class UserRegister(
     val password: String,
     val nickname: String?,
     val name: String,
+    //TODO: String to LocalDate
     val dateOfBirth: String,
 )
 

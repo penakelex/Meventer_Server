@@ -1,9 +1,6 @@
 package org.penakelex.database.services.usersFeedback
 
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.penakelex.database.models.UserFeedback
 import org.penakelex.database.models.UserFeedbackCreate
 import org.penakelex.database.services.TableService
@@ -17,7 +14,14 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
         val usersCount = Users.select {
             Users.id.eq(fromUserID) or Users.id.eq(feedback.toUserID)
         }.toList().size
+        //TODO: Перенести изменения отсюда
         if (usersCount != 2) return@databaseQuery Result.NO_USER_WITH_SUCH_ID
+        val feedbackWithSameUsersID = UsersFeedback.select {
+            UsersFeedback.to_user_id.eq(feedback.toUserID) and UsersFeedback.from_user_id.eq(fromUserID)
+        }.singleOrNull()
+        if (feedbackWithSameUsersID != null) {
+            return@databaseQuery Result.FEEDBACK_FROM_SAME_USER_AND_TO_SAME_USER
+        }
         UsersFeedback.insert {
             it[to_user_id] = feedback.toUserID
             it[from_user_id] = fromUserID

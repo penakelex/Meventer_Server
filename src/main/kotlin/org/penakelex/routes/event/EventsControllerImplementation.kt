@@ -17,7 +17,6 @@ import org.penakelex.session.USER_ID
 class EventsControllerImplementation(
     private val service: Service,
     private val fileManager: FileManager
-
 ) : EventsController {
     override suspend fun createEvent(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()

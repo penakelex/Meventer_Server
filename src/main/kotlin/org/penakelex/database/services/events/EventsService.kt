@@ -13,6 +13,7 @@ interface EventsService {
     suspend fun getFeaturedEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
     suspend fun getParticipantEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
     suspend fun getOrganizerEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
+    //TODO: To changing state from adding
     suspend fun addParticipantToEvent(userID: Int, eventID: Int): Result
     suspend fun addOrganizerToEvent(adderID: Int, organizer: EventOrganizer): Result
     suspend fun addEventInFavourites(userID: Int, eventID: Int): Result

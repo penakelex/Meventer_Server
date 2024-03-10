@@ -17,6 +17,7 @@ data class Event(
     val minimalAge: Short,
     val maximalAge: Short?,
     val price: Int,
+    //TODO: Add originator, cause he isn`t in organizers
     val organizers: List<Int>
 )
 
