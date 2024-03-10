@@ -97,5 +97,17 @@ enum class Result(
     EMPTY_EVENT_ID(
         HttpStatusCode.NotFound.value.toUShort(),
         "Empty event ID"
+    ),
+    FEEDBACK_FROM_SAME_USER_AND_TO_SAME_USER(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "Feedback from user with such ID to user with such ID already exists"
+    ),
+    AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "As originator you can`t be someone else"
+    ),
+    YOU_ARE_ALREADY_ORGANIZER_OF_THIS_EVENT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You are already organizer of this event"
     )
 }

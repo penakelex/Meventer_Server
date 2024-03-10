@@ -3,10 +3,21 @@
 package org.penakelex.database.extenstions
 
 import org.jetbrains.exposed.sql.*
+import kotlin.jvm.internal.Intrinsics
 
 class AnyOp(
     expr1: Expression<*>, expr2: Expression<Array<*>>
-) : ComparisonOp(expr1, expr2, "ANY")
+) : ComparisonOp(expr1, expr2, "= ANY") {
+    override fun toQueryBuilder(queryBuilder: QueryBuilder) {
+        Intrinsics.checkNotNullParameter(queryBuilder, "queryBuilder")
+        queryBuilder.invoke {
+            append(expr1)
+            append("$opSign(")
+            append(expr2)
+            append(")")
+        }
+    }
+}
 
 infix fun ExpressionWithColumnType<Array<Int>>.any(
     value: Int

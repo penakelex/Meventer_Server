@@ -21,7 +21,7 @@ data class UserRegister(
     val password: String,
     val nickname: String?,
     val name: String,
-    val dateOfBirth: String,
+    val dateOfBirth: LocalDate,
 )
 
 /**

@@ -13,9 +13,10 @@ interface EventsService {
     suspend fun getFeaturedEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
     suspend fun getParticipantEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
     suspend fun getOrganizerEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
-    suspend fun addParticipantToEvent(userID: Int, eventID: Int): Result
-    suspend fun addOrganizerToEvent(adderID: Int, organizer: EventOrganizer): Result
-    suspend fun addEventInFavourites(userID: Int, eventID: Int): Result
+    suspend fun getOriginatorEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
+    suspend fun changeUserAsParticipant(userID: Int, eventID: Int): Result
+    suspend fun changeUserAsOrganizer(adderID: Int, organizer: EventOrganizer): Result
+    suspend fun changeEventInFavourites(userID: Int, eventID: Int): Result
     suspend fun getGlobalEvents(selection: EventSelection): Pair<Result, List<Event>?>
     fun resultRowToEvent(resultRow: ResultRow): Event
 }

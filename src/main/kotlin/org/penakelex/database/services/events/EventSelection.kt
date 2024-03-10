@@ -12,7 +12,7 @@ import org.penakelex.database.tables.Events
 import java.time.Instant
 
 fun EventSelection.getSelectExpression(): Op<Boolean> {
-    var expression: Op<Boolean> = Events.start_time.lessEq(Instant.now())
+    var expression: Op<Boolean> = Events.start_time.greaterEq(Instant.now())
     if (tags == null
         && age == null
         && minimalPrice == null
@@ -29,12 +29,12 @@ fun EventSelection.getSelectExpression(): Op<Boolean> {
 
 private fun EventSelection.getTagsExpression(): Op<Boolean>? {
     if (tags == null) return null
-    var expression = Events.name.iLike("*${tags.first()}*") or
-            Events.description.iLike("*${tags.first()}*")
+    var expression = Events.name.iLike("%${tags.first()}%") or
+            Events.description.iLike("%${tags.first()}%")
     for (i in 1..tags.lastIndex) {
         expression = expression or
-                Events.name.iLike("*${tags[i]}*") or
-                Events.description.iLike("*${tags[i]}*")
+                Events.name.iLike("%${tags[i]}%") or
+                Events.description.iLike("%${tags[i]}%")
     }
     return expression
 }

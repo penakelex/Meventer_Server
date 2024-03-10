@@ -8,10 +8,12 @@ import java.io.File
 
 class FileManager(private val directory: String) {
     suspend fun uploadFile(fileItems: List<PartData.FileItem>): List<String> = coroutineScope {
-        fileItems.map { fileItem ->
+        val fileNumber = getNewFileNumber()
+        val fileNames = (fileNumber until fileNumber.plus(fileItems.size)).map { "%020X".format(it) }
+        fileItems.mapIndexed { index, fileItem ->
             async(Dispatchers.IO) {
                 val fileExtension = fileItem.originalFileName?.substringAfterLast('.')
-                val filePath = "$directory\\${getNewFileName()}.${fileExtension}"
+                val filePath = "$directory\\${fileNames[index]}.${fileExtension}"
                 with(File(filePath)) {
                     writeBytes(fileItem.streamProvider().readBytes())
                     return@with name
@@ -26,14 +28,12 @@ class FileManager(private val directory: String) {
         }.await()
     }
 
-    private suspend fun getNewFileName(): String = coroutineScope {
+    private suspend fun getNewFileNumber(): Long = coroutineScope {
         async(Dispatchers.Default) {
-            var maximum = 0L
-            for (file in File(directory).listFiles() ?: return@async "%020X".format(1)) {
-                val fileName = file.nameWithoutExtension.toLongOrNull(16) ?: continue
-                if (fileName > maximum) maximum = fileName
-            }
-            return@async "%020X".format(maximum + 1)
+            val files = File(directory).listFiles() ?: return@async 1
+            files.maxOf { file ->
+                file.nameWithoutExtension.toLongOrNull(16) ?: Long.MIN_VALUE
+            } + 1
         }.await()
     }
 }

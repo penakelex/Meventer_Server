@@ -3,13 +3,14 @@ package org.penakelex.database.services.events
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.penakelex.database.extenstions.any
+import org.penakelex.database.extenstions.binaryContains
+import org.penakelex.database.extenstions.getAgeOfPersonToday
 import org.penakelex.database.models.*
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Events
 import org.penakelex.database.tables.Users
 import org.penakelex.response.Result
 import java.time.Instant
-import java.time.LocalDate
 
 class EventsServiceImplementation : TableService(), EventsService {
     override suspend fun insertEvent(
@@ -26,8 +27,6 @@ class EventsServiceImplementation : TableService(), EventsService {
             if (event.minimalAge != null) it[minimal_age] = event.minimalAge
             it[maximal_age] = event.maximalAge
             if (event.price != null) it[price] = event.price
-        }.also {
-            println("${it[Events.id]} - идентификатор события")
         }
         return@databaseQuery Result.OK
     }
@@ -37,7 +36,7 @@ class EventsServiceImplementation : TableService(), EventsService {
             where = {
                 Events.id.eq(event.eventID) and (
                         Events.originator.eq(organizerID) or Events.organizers.any(organizerID)
-                )
+                        )
             }
         ) {
             if (event.name != null) it[name] = event.name
@@ -46,16 +45,15 @@ class EventsServiceImplementation : TableService(), EventsService {
             if (event.minimalAge != null) it[minimal_age] = event.minimalAge
             if (event.maximalAge != null) it[maximal_age] = event.maximalAge
             if (event.price != null) it[price] = event.price
-        }.also {
-            println("Какое-то число, которое возвратило обновление таблицы: $it")
         }
         return@databaseQuery Result.OK
     }
 
     override suspend fun deleteEvent(eventID: Int, originatorID: Int): Result = databaseQuery {
-        Events.deleteWhere { Events.id.eq(eventID) and originator.eq(originatorID) }.also {
-            println("Какое-то число, которое возвратило удаление из таблицы: $it")
+        val deleteCount = Events.deleteWhere {
+            Events.id.eq(eventID) and originator.eq(originatorID)
         }
+        if (deleteCount == 0) return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
         return@databaseQuery Result.OK
     }
 
@@ -74,12 +72,12 @@ class EventsServiceImplementation : TableService(), EventsService {
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
         val events = Events.select {
-            Events.participants.any(id).or(Events.in_favourites.any(id))
-                .or(Events.organizers.any(id)).let {
-                    if (actual) it and Events.start_time.greaterEq(Instant.now())
-                    else if (aforetime) it and Events.start_time.less(Instant.now())
-                    else it
-                }
+            Events.originator.eq(id) or Events.participants.any(id) or Events.in_favourites.any(id) or
+                    Events.organizers.any(id).let {
+                        if (actual) it and Events.start_time.greaterEq(Instant.now())
+                        else if (aforetime) it and Events.start_time.less(Instant.now())
+                        else it
+                    }
         }.orderBy(Events.start_time).map { resultRowToEvent(resultRow = it) }
         return@databaseQuery if (events.isEmpty()) Result.EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
         else Result.OK to events
@@ -133,11 +131,30 @@ class EventsServiceImplementation : TableService(), EventsService {
         else Result.OK to events
     }
 
-    override suspend fun addParticipantToEvent(userID: Int, eventID: Int): Result = databaseQuery {
+    override suspend fun getOriginatorEvents(
+        id: Int,
+        actual: Boolean,
+        aforetime: Boolean
+    ): Pair<Result, List<Event>?> = databaseQuery {
+        val events = Events.select {
+            Events.originator.eq(id).let {
+                if (actual) it and Events.start_time.greaterEq(Instant.now())
+                else if (aforetime) it and Events.start_time.less(Instant.now())
+                else it
+            }
+        }.orderBy(Events.start_time).map { resultRowToEvent(resultRow = it) }
+        return@databaseQuery if (events.isEmpty()) Result.ORGANIZER_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
+        else Result.OK to events
+    }
+
+    override suspend fun changeUserAsParticipant(userID: Int, eventID: Int): Result = databaseQuery {
         val (participants, organizers, eventRequirements) = Events.select {
             Events.id.eq(eventID)
         }.singleOrNull()?.let {
-            Triple(
+            if (it[Events.originator] == userID) {
+                return@databaseQuery Result.AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE
+            }
+            return@let Triple(
                 it[Events.participants],
                 it[Events.organizers],
                 EventRequirements(
@@ -147,27 +164,26 @@ class EventsServiceImplementation : TableService(), EventsService {
             )
         } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
         val userAge = Users.select { Users.id.eq(userID) }.singleOrNull()?.let {
-            val dateOfBirth = it[Users.date_of_birth]
-            val todayDate = LocalDate.now()
-            if (todayDate.monthValue - dateOfBirth.monthValue > 0
-                || todayDate.monthValue - dateOfBirth.monthValue == 0
-                && todayDate.dayOfMonth - dateOfBirth.dayOfMonth >= 0
-            ) todayDate.year - dateOfBirth.year
-            else todayDate.year - dateOfBirth.year - 1
+            it[Users.date_of_birth].getAgeOfPersonToday()
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
-        if (userAge !in eventRequirements.minimalAge..(eventRequirements.maximalAge ?: Short.MAX_VALUE)) {
+        val permittedAges = eventRequirements.minimalAge..(eventRequirements.maximalAge ?: Short.MAX_VALUE)
+        if (userAge !in permittedAges) {
             return@databaseQuery Result.YOUR_AGE_DOES_NOT_MATCH_THE_REQUIRED_BY_THE_EVENT_ORGANIZERS
         }
-        Events.update({ Events.id.eq(eventID) }) {
+        Events.update(
+            where = { Events.id.eq(eventID) }
+        ) {
             it[Events.participants] = participants.plus(userID).sortedArray()
-            if (userID in organizers) {
-                it[Events.organizers] = organizers.filter { id -> id != userID }.toTypedArray()
+            it[Events.organizers] = organizers.run {
+                if (binaryContains(userID)) filter { id -> id != userID }.toTypedArray()
+                else plus(userID).sortedArray()
             }
+
         }
         return@databaseQuery Result.OK
     }
 
-    override suspend fun addOrganizerToEvent(adderID: Int, organizer: EventOrganizer): Result = databaseQuery {
+    override suspend fun changeUserAsOrganizer(adderID: Int, organizer: EventOrganizer): Result = databaseQuery {
         val (organizers, participants, originatorID) = Events.select {
             Events.id.eq(organizer.eventID)
         }.singleOrNull()?.let {
@@ -177,24 +193,42 @@ class EventsServiceImplementation : TableService(), EventsService {
                 it[Events.originator]
             )
         } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
-        if (adderID != originatorID) return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_EVENT
-        Users.select { Users.id.eq(organizer.addingID) }.singleOrNull()
-            ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
-        Events.update({ Events.id.eq(organizer.eventID) and Events.originator.eq(adderID) }) {
+        if (adderID != originatorID) {
+            return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_EVENT
+        }
+        if (organizer.addingID == originatorID) {
+            return@databaseQuery Result.AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE
+        }
+        if (organizer.addingID in organizers) {
+            return@databaseQuery Result.YOU_ARE_ALREADY_ORGANIZER_OF_THIS_EVENT
+        }
+        val addingUser = Users.select { Users.id.eq(organizer.addingID) }.singleOrNull()
+        if (addingUser == null) {
+            return@databaseQuery Result.NO_USER_WITH_SUCH_ID
+        }
+        Events.update(
+            where = { Events.id.eq(organizer.eventID) and Events.originator.eq(adderID) }
+        ) {
             it[Events.organizers] = organizers.plus(organizer.addingID).sortedArray()
-            if (organizer.addingID in participants) {
-                it[Events.participants] = participants.filter { id -> id != organizer.addingID }.toTypedArray()
+            it[Events.participants] = participants.run {
+                if (binaryContains(organizer.addingID)) filter { id -> id != organizer.addingID }.toTypedArray()
+                else plus(organizer.addingID).sortedArray()
             }
         }
         return@databaseQuery Result.OK
     }
 
-    override suspend fun addEventInFavourites(userID: Int, eventID: Int): Result = databaseQuery {
+    override suspend fun changeEventInFavourites(userID: Int, eventID: Int): Result = databaseQuery {
         val inFavourites = Events.select { Events.id.eq(eventID) }.singleOrNull()?.let {
             it[Events.in_favourites]
         } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
-        Events.update({ Events.id.eq(eventID) }) {
-            it[in_favourites] = inFavourites.plus(userID).sortedArray()
+        Events.update(
+            where = { Events.id.eq(eventID) }
+        ) {
+            it[in_favourites] = inFavourites.run {
+                if (binaryContains(userID)) filter { id -> id != userID }.toTypedArray()
+                else plus(userID).sortedArray()
+            }
         }
         return@databaseQuery Result.OK
     }
@@ -204,8 +238,8 @@ class EventsServiceImplementation : TableService(), EventsService {
             selection.getSelectExpression()
         }.orderBy(
             Events.start_time to when (selection.sortBy) {
-                EventSelection.SortingStates.NEAREST_ONES_FIRST.state -> SortOrder.ASC
-                else -> SortOrder.DESC
+                EventSelection.SortingStates.FURTHER_ONES_FIRST.state -> SortOrder.DESC
+                else -> SortOrder.ASC
             }
         ).map { resultRowToEvent(resultRow = it) }
     }
@@ -219,6 +253,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         minimalAge = resultRow[Events.minimal_age],
         maximalAge = resultRow[Events.maximal_age],
         price = resultRow[Events.price],
+        originator = resultRow[Events.originator],
         organizers = resultRow[Events.organizers].toList()
     )
 }

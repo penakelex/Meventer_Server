@@ -17,7 +17,6 @@ import org.penakelex.session.USER_ID
 class EventsControllerImplementation(
     private val service: Service,
     private val fileManager: FileManager
-
 ) : EventsController {
     override suspend fun createEvent(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
@@ -58,22 +57,22 @@ class EventsControllerImplementation(
         )
     }
 
-    override suspend fun addParticipantToEvent(call: ApplicationCall) = call.respond(
-        service.eventsService.addParticipantToEvent(
+    override suspend fun changeUserAsParticipant(call: ApplicationCall) = call.respond(
+        service.eventsService.changeUserAsParticipant(
             userID = call.getIntJWTPrincipalClaim(USER_ID),
             eventID = call.receive<Int>()
         ).toResultResponse()
     )
 
-    override suspend fun addOrganizerToEvent(call: ApplicationCall) = call.respond(
-        service.eventsService.addOrganizerToEvent(
+    override suspend fun changeUserAsOrganizer(call: ApplicationCall) = call.respond(
+        service.eventsService.changeUserAsOrganizer(
             adderID = call.getIntJWTPrincipalClaim(USER_ID),
             organizer = call.receive<EventOrganizer>()
         ).toResultResponse()
     )
 
-    override suspend fun inFeaturedEventChange(call: ApplicationCall) = call.respond(
-        service.eventsService.addEventInFavourites(
+    override suspend fun changeEventInFavourites(call: ApplicationCall) = call.respond(
+        service.eventsService.changeEventInFavourites(
             userID = call.getIntJWTPrincipalClaim(USER_ID),
             eventID = call.receive<Int>()
         ).toResultResponse()
@@ -99,6 +98,10 @@ class EventsControllerImplementation(
 
             EventsType.Participant.type -> {
                 service.eventsService.getParticipantEvents(id, actual, aforetime)
+            }
+
+            EventsType.Originator.type -> {
+                service.eventsService.getOriginatorEvents(id, actual, aforetime)
             }
 
             else -> Result.UNRESOLVED_EVENT_TYPE to null

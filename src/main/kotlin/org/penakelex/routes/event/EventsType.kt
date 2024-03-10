@@ -4,5 +4,6 @@ enum class EventsType(val type: String) {
     All(""),
     Participant("participant"),
     Organizer("organizer"),
-    Featured("featured")
+    Featured("featured"),
+    Originator("originator")
 }

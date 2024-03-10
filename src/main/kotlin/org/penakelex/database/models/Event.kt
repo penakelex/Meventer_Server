@@ -17,6 +17,7 @@ data class Event(
     val minimalAge: Short,
     val maximalAge: Short?,
     val price: Int,
+    val originator: Int,
     val organizers: List<Int>
 )
 
