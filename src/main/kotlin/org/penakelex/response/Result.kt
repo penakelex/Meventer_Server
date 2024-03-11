@@ -109,5 +109,9 @@ enum class Result(
     YOU_ARE_ALREADY_ORGANIZER_OF_THIS_EVENT(
         HttpStatusCode.Forbidden.value.toUShort(),
         "You are already organizer of this event"
+    ),
+    USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS(
+        HttpStatusCode.Found.value.toUShort(),
+        "User with such nickname already exists"
     )
 }

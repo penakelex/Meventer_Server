@@ -11,6 +11,7 @@ fun Route.userRoutes(controller: UsersController) = route("/user") {
     post("/verifyEmailCode") { controller.verifyEmailCode(call) }
     authenticate {
         post("/data") { controller.getUserData(call) }
+        get("/verifyToken") { controller.verifyToken(call) }
         route("/feedback") {
             post("/create") { controller.createFeedback(call) }
             post("/get") { controller.getFeedbackToUser(call) }

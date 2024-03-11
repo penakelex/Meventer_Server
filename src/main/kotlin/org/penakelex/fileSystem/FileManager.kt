@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.io.File
+import java.io.FileNotFoundException
 
 class FileManager(private val directory: String) {
     suspend fun uploadFile(fileItems: List<PartData.FileItem>): List<String> = coroutineScope {
@@ -22,9 +23,13 @@ class FileManager(private val directory: String) {
         }.map { it.await() }
     }
 
-    suspend fun downloadFile(fileName: String): File = coroutineScope {
+    suspend fun downloadFile(fileName: String): File? = coroutineScope {
         async(Dispatchers.IO) {
-            File("$directory\\$fileName")
+            try {
+                File("$directory\\$fileName")
+            } catch (exception: FileNotFoundException) {
+                null
+            }
         }.await()
     }
 

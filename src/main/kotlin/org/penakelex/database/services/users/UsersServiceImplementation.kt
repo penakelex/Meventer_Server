@@ -2,7 +2,6 @@ package org.penakelex.database.services.users
 
 import org.jetbrains.exposed.sql.insertIgnoreAndGetId
 import org.jetbrains.exposed.sql.select
-import org.penakelex.database.extenstions.Date_Pattern
 import org.penakelex.database.models.User
 import org.penakelex.database.models.UserEmail
 import org.penakelex.database.models.UserLogin
@@ -12,8 +11,6 @@ import org.penakelex.database.tables.Users
 import org.penakelex.ecnryption.cipher
 import org.penakelex.ecnryption.unCipher
 import org.penakelex.response.Result
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
@@ -32,15 +29,17 @@ class UsersServiceImplementation(
     override suspend fun insertNewUser(user: UserRegister, avatar: String?): Pair<Result, Int?> = databaseQuery {
         val checkResult = checkIfEmailIsTaken(user.email)
         if (checkResult != Result.OK) return@databaseQuery checkResult to null
+        val userWithSameNickname = if (user.nickname == null) null else {
+            Users.select { Users.nickname.eq(user.nickname) }.singleOrNull()
+        }
+        if (userWithSameNickname != null) return@databaseQuery Result.USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS to null
         return@databaseQuery Result.OK to Users.insertIgnoreAndGetId {
             it[email] = user.email
             it[password] = user.password.cipher()
             it[name] = user.name
             it[nickname] = user.nickname ?: UUID.randomUUID().toString()
             it[Users.avatar] = avatar ?: basicAvatar
-            it[date_of_birth] = LocalDate.parse(
-                user.dateOfBirth, DateTimeFormatter.ofPattern(Date_Pattern)
-            )
+            it[date_of_birth] = user.dateOfBirth
         }?.value
     }
 

@@ -66,7 +66,7 @@ class EventsControllerImplementation(
 
     override suspend fun changeUserAsOrganizer(call: ApplicationCall) = call.respond(
         service.eventsService.changeUserAsOrganizer(
-            adderID = call.getIntJWTPrincipalClaim(USER_ID),
+            changerID = call.getIntJWTPrincipalClaim(USER_ID),
             organizer = call.receive<EventOrganizer>()
         ).toResultResponse()
     )

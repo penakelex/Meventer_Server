@@ -48,7 +48,7 @@ data class EventSelection(
 @Serializable
 data class EventOrganizer(
     val eventID: Int,
-    val addingID: Int
+    val changingID: Int
 )
 
 @Serializable

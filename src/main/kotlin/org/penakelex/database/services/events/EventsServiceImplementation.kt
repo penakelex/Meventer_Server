@@ -2,8 +2,8 @@ package org.penakelex.database.services.events
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.penakelex.database.extenstions.any
 import org.penakelex.database.extenstions.binaryContains
+import org.penakelex.database.extenstions.eqAny
 import org.penakelex.database.extenstions.getAgeOfPersonToday
 import org.penakelex.database.models.*
 import org.penakelex.database.services.TableService
@@ -35,7 +35,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         Events.update(
             where = {
                 Events.id.eq(event.eventID) and (
-                        Events.originator.eq(organizerID) or Events.organizers.any(organizerID)
+                        Events.originator.eq(organizerID) or Events.organizers.eqAny(organizerID)
                         )
             }
         ) {
@@ -72,8 +72,8 @@ class EventsServiceImplementation : TableService(), EventsService {
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
         val events = Events.select {
-            Events.originator.eq(id) or Events.participants.any(id) or Events.in_favourites.any(id) or
-                    Events.organizers.any(id).let {
+            Events.originator.eq(id) or Events.participants.eqAny(id) or Events.in_favourites.eqAny(id) or
+                    Events.organizers.eqAny(id).let {
                         if (actual) it and Events.start_time.greaterEq(Instant.now())
                         else if (aforetime) it and Events.start_time.less(Instant.now())
                         else it
@@ -89,7 +89,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
         val events = Events.select {
-            Events.in_favourites.any(id).let {
+            Events.in_favourites.eqAny(id).let {
                 if (actual) it and Events.start_time.greaterEq(Instant.now())
                 else if (aforetime) it and Events.start_time.less(Instant.now())
                 else it
@@ -105,7 +105,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
         val events = Events.select {
-            Events.participants.any(id).let {
+            Events.participants.eqAny(id).let {
                 if (actual) it and Events.start_time.greaterEq(Instant.now())
                 else if (aforetime) it and Events.start_time.less(Instant.now())
                 else it
@@ -121,7 +121,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
         val events = Events.select {
-            Events.organizers.any(id).let {
+            Events.organizers.eqAny(id).let {
                 if (actual) it and Events.start_time.greaterEq(Instant.now())
                 else if (aforetime) it and Events.start_time.less(Instant.now())
                 else it
@@ -173,17 +173,18 @@ class EventsServiceImplementation : TableService(), EventsService {
         Events.update(
             where = { Events.id.eq(eventID) }
         ) {
-            it[Events.participants] = participants.plus(userID).sortedArray()
-            it[Events.organizers] = organizers.run {
-                if (binaryContains(userID)) filter { id -> id != userID }.toTypedArray()
+            it[Events.participants] = participants.run {
+                if (participants.binaryContains(userID)) filter { id -> id != userID }.toTypedArray()
                 else plus(userID).sortedArray()
             }
-
+            if (organizers.binaryContains(userID)) {
+                it[Events.organizers] = organizers.filter { id -> id != userID }.toTypedArray()
+            }
         }
         return@databaseQuery Result.OK
     }
 
-    override suspend fun changeUserAsOrganizer(adderID: Int, organizer: EventOrganizer): Result = databaseQuery {
+    override suspend fun changeUserAsOrganizer(changerID: Int, organizer: EventOrganizer): Result = databaseQuery {
         val (organizers, participants, originatorID) = Events.select {
             Events.id.eq(organizer.eventID)
         }.singleOrNull()?.let {
@@ -193,26 +194,28 @@ class EventsServiceImplementation : TableService(), EventsService {
                 it[Events.originator]
             )
         } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
-        if (adderID != originatorID) {
+        if (changerID != originatorID) {
             return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_EVENT
         }
-        if (organizer.addingID == originatorID) {
+        if (organizer.changingID == originatorID) {
             return@databaseQuery Result.AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE
         }
-        if (organizer.addingID in organizers) {
+        if (organizer.changingID in organizers) {
             return@databaseQuery Result.YOU_ARE_ALREADY_ORGANIZER_OF_THIS_EVENT
         }
-        val addingUser = Users.select { Users.id.eq(organizer.addingID) }.singleOrNull()
+        val addingUser = Users.select { Users.id.eq(organizer.changingID) }.singleOrNull()
         if (addingUser == null) {
             return@databaseQuery Result.NO_USER_WITH_SUCH_ID
         }
         Events.update(
-            where = { Events.id.eq(organizer.eventID) and Events.originator.eq(adderID) }
+            where = { Events.id.eq(organizer.eventID) and Events.originator.eq(changerID) }
         ) {
-            it[Events.organizers] = organizers.plus(organizer.addingID).sortedArray()
-            it[Events.participants] = participants.run {
-                if (binaryContains(organizer.addingID)) filter { id -> id != organizer.addingID }.toTypedArray()
-                else plus(organizer.addingID).sortedArray()
+            it[Events.organizers] = organizers.run {
+                if (binaryContains(organizer.changingID)) filter { id -> id != organizer.changingID }.toTypedArray()
+                else plus(organizer.changingID).sortedArray()
+            }
+            if (participants.binaryContains(organizer.changingID)) {
+                it[Events.participants] = participants.filter { id -> id != organizer.changingID }.toTypedArray()
             }
         }
         return@databaseQuery Result.OK

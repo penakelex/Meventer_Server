@@ -19,6 +19,6 @@ class AnyOp(
     }
 }
 
-infix fun ExpressionWithColumnType<Array<Int>>.any(
+infix fun ExpressionWithColumnType<Array<Int>>.eqAny(
     value: Int
 ): Op<Boolean> = AnyOp(QueryParameter(value, columnType), this as Expression<Array<*>>)

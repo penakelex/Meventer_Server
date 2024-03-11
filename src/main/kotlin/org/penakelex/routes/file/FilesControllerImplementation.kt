@@ -1,5 +1,6 @@
 package org.penakelex.routes.file
 
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import org.penakelex.fileSystem.FileManager
@@ -13,7 +14,7 @@ class FilesControllerImplementation(
         val file = fileManager.downloadFile(
             fileName = call.parameters["fileName"]
                 ?: return call.respond(Result.EMPTY_FILENAME.toResultResponse())
-        )
+        ) ?: return call.respond(HttpStatusCode.NotFound)
         call.respondFile(file)
     }
 }
