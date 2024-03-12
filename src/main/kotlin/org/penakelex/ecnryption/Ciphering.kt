@@ -6,6 +6,12 @@ private const val Alphabet = "HOD0hk964TdpJG2obPycLr7UqSNaAMjIleZzwngFsK1BXtvuQV
 private const val Base: Byte = 62
 private const val Seed: Short = 4689
 private const val Spliterator = '.'
+
+/**
+ * Ciphers object, using it as [String] value to cipher
+ * @param addSalt if true adds random string at the end of the origin
+ * @return ciphered string
+ * */
 fun Any.cipher(addSalt: Boolean = false): String = buildString {
     var thisString = if (this@cipher is String) this@cipher else this@cipher.toString()
     if (addSalt) thisString = thisString.plus(getRandomString())
@@ -15,6 +21,10 @@ fun Any.cipher(addSalt: Boolean = false): String = buildString {
     }
 }
 
+/**
+ * Ciphers character to code
+ * @return ciphered character string
+ * */
 private fun Char.toCode(): String = buildString {
     var code = code * Seed
     while (code != 0) {
@@ -23,6 +33,10 @@ private fun Char.toCode(): String = buildString {
     }
 }
 
+/**
+ * Generates a random string
+ * @return string with random characters
+ * */
 private fun getRandomString(): String {
     val characters = ('A'..'Z').plus('a'..'z').plus('0'..'9')
     return buildString {
@@ -32,6 +46,11 @@ private fun getRandomString(): String {
     }
 }
 
+/**
+ * Unciphers given string to origin
+ * @receiver [String] ciphered string
+ * @return original string value
+ * */
 fun String.unCipher(): String {
     if (isEmpty()) return ""
     val symbolsIndices = buildMap { for ((index, symbol) in Alphabet.withIndex()) set(symbol, index) }
@@ -42,6 +61,11 @@ fun String.unCipher(): String {
     }
 }
 
+/**
+ * Uncodes string to character
+ * @receiver ciphered character
+ * @return original character
+ * */
 private fun String.unCode(symbolsIndices: Map<Char, Int>): Char {
     var power = 0
     var code = 0

@@ -24,6 +24,11 @@ interface UsersService {
      * user ID from database
      * */
     suspend fun insertNewUser(user: UserRegister, avatar: String?): Pair<Result, Int?>
+    /**
+     * Gets from Users table data about user by his ID
+     * @param id user ID to get his data
+     * @return
+     * */
     suspend fun getUserData(id: Int): Pair<Result, User?>
 
     /**

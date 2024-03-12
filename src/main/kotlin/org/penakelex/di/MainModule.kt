@@ -11,7 +11,7 @@ import org.penakelex.database.services.events.EventsServiceImplementation
 import org.penakelex.database.services.users.UsersServiceImplementation
 import org.penakelex.database.services.usersEmailCodes.UsersEmailCodesServiceImplementation
 import org.penakelex.database.services.usersFeedback.UsersFeedbackServiceImplementation
-import org.penakelex.fileSystem.FileManager
+import org.penakelex.fileSystem.FileManagerImplementation
 import org.penakelex.routes.Controller
 import org.penakelex.routes.event.EventsControllerImplementation
 import org.penakelex.routes.file.FilesControllerImplementation
@@ -77,7 +77,7 @@ val mainModule = module {
         }
     }
     single {
-        FileManager(
+        FileManagerImplementation(
             directory = config.property("file.directory").getString()
         )
     }

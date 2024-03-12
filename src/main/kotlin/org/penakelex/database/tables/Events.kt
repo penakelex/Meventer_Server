@@ -6,6 +6,9 @@ import org.jetbrains.exposed.sql.TextColumnType
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.penakelex.database.extenstions.array
 
+/**
+ * Events table object
+ * */
 object Events : IntIdTable("events") {
     val name = text("name")
     val images = array<String>("images", TextColumnType())

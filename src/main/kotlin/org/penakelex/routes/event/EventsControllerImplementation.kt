@@ -7,7 +7,7 @@ import io.ktor.server.response.*
 import kotlinx.serialization.json.Json
 import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
-import org.penakelex.fileSystem.FileManager
+import org.penakelex.fileSystem.FileManagerImplementation
 import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
@@ -16,7 +16,7 @@ import org.penakelex.session.USER_ID
 
 class EventsControllerImplementation(
     private val service: Service,
-    private val fileManager: FileManager
+    private val fileManager: FileManagerImplementation
 ) : EventsController {
     override suspend fun createEvent(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()

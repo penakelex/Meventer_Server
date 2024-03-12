@@ -8,9 +8,11 @@ import kotlinx.serialization.encoding.Encoder
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-
 const val Date_Pattern = "yyyy-MM-dd"
 
+/**
+ * Json serializer for [LocalDate]
+ * */
 object LocalDateSerializer : KSerializer<LocalDate> {
     override val descriptor = PrimitiveSerialDescriptor(
         "java.time.LocalDate", PrimitiveKind.STRING

@@ -35,6 +35,13 @@ data class UserLogin(
     val password: String
 )
 
+/**
+ * Data transfer object for user
+ * @property id user ID
+ * @property email user email
+ * @property avatar user avatar
+ * @property dateOfBirth user date of birth
+ * */
 @Serializable
 data class User(
     val id: Int,
@@ -43,6 +50,10 @@ data class User(
     val dateOfBirth: LocalDate
 )
 
+/**
+ * Data transfer object for nullable user ID
+ * @property id nullable user ID
+ * */
 @Serializable
 data class NullableUserID(
     val id: Int?

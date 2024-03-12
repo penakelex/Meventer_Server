@@ -7,7 +7,9 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.time.Instant
-
+/**
+ * Json serializer for [Instant]
+ * */
 object InstantSerializer : KSerializer<Instant> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(
         "java.time.Instant", PrimitiveKind.STRING

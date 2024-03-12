@@ -2,6 +2,12 @@ package org.penakelex.database.models
 
 import kotlinx.serialization.Serializable
 
+/**
+ * Data transfer object for creating feedback to user
+ * @property toUserID user ID to receive feedback
+ * @property rating feedback rating
+ * @property comment feedback comment
+ * */
 @Serializable
 data class UserFeedbackCreate(
     val toUserID: Int,
@@ -9,6 +15,12 @@ data class UserFeedbackCreate(
     val comment: String
 )
 
+/**
+ * Data transfer object for user feedback
+ * @property fromUserID user ID that left feedback
+ * @property rating feedback rating
+ * @property comment feedback comment
+ * */
 @Serializable
 data class UserFeedback(
     val fromUserID: Int,

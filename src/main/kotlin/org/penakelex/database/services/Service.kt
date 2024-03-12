@@ -16,6 +16,8 @@ import org.penakelex.database.tables.UsersFeedback
  * Container class for database table services
  * @property usersService Users table service
  * @property usersEmailCodesService UsersEmailCodes table service
+ * @property eventsService Events table service
+ * @property usersFeedbackService UsersFeedback table service
  * @param database exemplar of the database to initialize its schema and tables
  * */
 class Service(

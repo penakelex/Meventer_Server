@@ -1,44 +1,26 @@
 package org.penakelex.fileSystem
 
 import io.ktor.http.content.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import java.io.File
-import java.io.FileNotFoundException
 
-class FileManager(private val directory: String) {
-    suspend fun uploadFile(fileItems: List<PartData.FileItem>): List<String> = coroutineScope {
-        val fileNumber = getNewFileNumber()
-        val fileNames = (fileNumber until fileNumber.plus(fileItems.size)).map { "%020X".format(it) }
-        fileItems.mapIndexed { index, fileItem ->
-            async(Dispatchers.IO) {
-                val fileExtension = fileItem.originalFileName?.substringAfterLast('.')
-                val filePath = "$directory\\${fileNames[index]}.${fileExtension}"
-                with(File(filePath)) {
-                    writeBytes(fileItem.streamProvider().readBytes())
-                    return@with name
-                }
-            }
-        }.map { it.await() }
-    }
+interface FileManager {
+    /**
+     * Uploads given files to file system
+     * @param fileItems list of FileItems
+     * @return list of file names
+     * */
+    suspend fun uploadFile(fileItems: List<PartData.FileItem>): List<String>
 
-    suspend fun downloadFile(fileName: String): File? = coroutineScope {
-        async(Dispatchers.IO) {
-            try {
-                File("$directory\\$fileName")
-            } catch (exception: FileNotFoundException) {
-                null
-            }
-        }.await()
-    }
+    /**
+     * Downloads file by the [fileName]
+     * @param fileName file name to download
+     * @return file if it is found else null
+     * */
+    suspend fun downloadFile(fileName: String): File?
 
-    private suspend fun getNewFileNumber(): Long = coroutineScope {
-        async(Dispatchers.Default) {
-            val files = File(directory).listFiles() ?: return@async 1
-            files.maxOf { file ->
-                file.nameWithoutExtension.toLongOrNull(16) ?: Long.MIN_VALUE
-            } + 1
-        }.await()
-    }
+    /**
+     * Checks last one maximum file and gets new name
+     * @return new file name (number)
+     * */
+    suspend fun getNewFileNumber(): Long
 }

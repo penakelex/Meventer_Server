@@ -10,7 +10,7 @@ import jakarta.mail.internet.MimeMessage
 import kotlinx.serialization.json.Json
 import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
-import org.penakelex.fileSystem.FileManager
+import org.penakelex.fileSystem.FileManagerImplementation
 import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
@@ -28,7 +28,7 @@ class UsersControllerImplementation(
     private val properties: Properties,
     private val userEmailValues: UserEmailValues,
     private val authenticator: Authenticator,
-    private val fileManager: FileManager
+    private val fileManager: FileManagerImplementation
 ) : UsersController {
     override suspend fun sendEmailCode(call: ApplicationCall) {
         val userEmail = call.receive<UserEmail>()
