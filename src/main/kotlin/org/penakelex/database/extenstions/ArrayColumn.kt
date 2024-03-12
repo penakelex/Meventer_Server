@@ -33,8 +33,3 @@ class ArrayColumnType(private val type: ColumnType) : ColumnType() {
         } else return super.notNullValueToDB(value)
     }
 }
-
-class ContainsOp(expr1: Expression<*>, expr2: Expression<*>) : ComparisonOp(expr1, expr2, "@>")
-
-infix fun <T, S> ExpressionWithColumnType<T>.contains(array: Array<in S>): Op<Boolean> =
-    ContainsOp(this, QueryParameter(array, columnType))

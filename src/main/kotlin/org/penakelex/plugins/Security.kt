@@ -8,10 +8,11 @@ import io.ktor.server.response.*
 import org.koin.ktor.ext.inject
 import org.penakelex.database.services.Service
 import org.penakelex.response.Result
+import org.penakelex.response.toResultResponse
 import org.penakelex.session.JWTValues
-import org.penakelex.session.getAlgorithm
 import org.penakelex.session.PASSWORD
 import org.penakelex.session.USER_ID
+import org.penakelex.session.getAlgorithm
 
 fun Application.configureSecurity() {
     val service by inject<Service>()
@@ -27,15 +28,16 @@ fun Application.configureSecurity() {
                     .build()
             )
             validate { jwtCredential ->
+                val isTokenExpired = jwtCredential.payload.expiresAt.time <= System.currentTimeMillis()
+                if (isTokenExpired) return@validate null
                 val isTokenValid = service.usersService.isTokenValid(
-                    jwtCredential.payload.getClaim(USER_ID).asInt() ?: return@validate null,
-                    jwtCredential.payload.getClaim(PASSWORD).asString() ?: return@validate null
+                    userID = jwtCredential.payload.getClaim(USER_ID).asInt() ?: return@validate null,
+                    password = jwtCredential.payload.getClaim(PASSWORD).asString() ?: return@validate null
                 ) == Result.OK
-                val isTokenNotExpired = jwtCredential.payload.expiresAt.time > System.currentTimeMillis()
-                if (isTokenNotExpired && isTokenValid) JWTPrincipal(jwtCredential.payload)
+                if (isTokenValid) JWTPrincipal(jwtCredential.payload)
                 else null
             }
-            challenge { _, _ -> call.respond(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED) }
+            challenge { _, _ -> call.respond(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED.toResultResponse()) }
         }
     }
 }

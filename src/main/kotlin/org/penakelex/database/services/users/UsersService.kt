@@ -1,5 +1,6 @@
 package org.penakelex.database.services.users
 
+import org.penakelex.database.models.User
 import org.penakelex.database.models.UserEmail
 import org.penakelex.database.models.UserLogin
 import org.penakelex.database.models.UserRegister
@@ -22,7 +23,13 @@ interface UsersService {
      * @return if email isn`t free [Result.USER_WITH_SUCH_EMAIL_ALREADY_EXISTS] to null else [Result.OK] to
      * user ID from database
      * */
-    suspend fun insertNewUser(user: UserRegister): Pair<Result, Int?>
+    suspend fun insertNewUser(user: UserRegister, avatar: String?): Pair<Result, Int?>
+    /**
+     * Gets from Users table data about user by his ID
+     * @param id user ID to get his data
+     * @return
+     * */
+    suspend fun getUserData(id: Int): Pair<Result, User?>
 
     /**
      * Checks if user email and password matches those from database

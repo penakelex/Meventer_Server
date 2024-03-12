@@ -38,12 +38,80 @@ enum class Result(
         HttpStatusCode.Conflict.value.toUShort(),
         "Verification code is incorrect"
     ),
-    /*VERIFICATION_CODE_SENDING_FAILED(
-        HttpStatusCode.ExpectationFailed.value.toUShort(),
-        "Verification code sending failed"
-    ),*/
     SENDING_VERIFICATION_CODE_STARTED(
         HttpStatusCode.OK.value.toUShort(),
         "Verification code sending started"
     ),
+    EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Events for user with such ID not found"
+    ),
+    EMPTY_FORM_ITEM_OF_MULTI_PART_DATA(
+        HttpStatusCode.ExpectationFailed.value.toUShort(),
+        "Empty form item of multi part data"
+    ),
+    FEATURED_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Featured events for user with such ID not found"
+    ),
+    ORGANIZER_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Events where user with such ID is organizer not found"
+    ),
+    PARTICIPANT_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NoContent.value.toUShort(),
+        "Events where user with such ID is participant not found"
+    ),
+    UNRESOLVED_EVENT_TYPE(
+        HttpStatusCode.Conflict.value.toUShort(),
+        "Unresolved event type"
+    ),
+    EVENT_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Event with such ID not found"
+    ),
+    YOU_CAN_NOT_MANAGE_THIS_EVENT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You can`t manage this event"
+    ),
+    YOU_CAN_NOT_FEEDBACK_YOURSELF(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You can`t feedback yourself"
+    ),
+    FEEDBACKS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Feedbacks for user with such ID not found"
+    ),
+    YOUR_AGE_DOES_NOT_MATCH_THE_REQUIRED_BY_THE_EVENT_ORGANIZERS(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "Your age doesn`t match the required by the event organizers"
+    ),
+    USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "User can`t have more than one avatar"
+    ),
+    EMPTY_FILENAME(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Empty filename"
+    ),
+    EMPTY_EVENT_ID(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Empty event ID"
+    ),
+    FEEDBACK_FROM_SAME_USER_AND_TO_SAME_USER(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "Feedback from user with such ID to user with such ID already exists"
+    ),
+    AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "As originator you can`t be someone else"
+    ),
+    YOU_ARE_ALREADY_ORGANIZER_OF_THIS_EVENT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You are already organizer of this event"
+    ),
+    USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS(
+        HttpStatusCode.Found.value.toUShort(),
+        "User with such nickname already exists"
+    )
 }
