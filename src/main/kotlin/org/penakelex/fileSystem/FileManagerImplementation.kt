@@ -6,14 +6,18 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.concurrent.atomic.AtomicLong
+
+private const val File_Name_Pattern = "%020X"
 
 /**
  * File manager implementation
  * */
-class FileManagerImplementation(private val directory: String): FileManager {
-    override suspend fun uploadFile(fileItems: List<PartData.FileItem>): List<String> = coroutineScope {
-        val fileNumber = getNewFileNumber()
-        val fileNames = (fileNumber until fileNumber.plus(fileItems.size)).map { "%020X".format(it) }
+class FileManagerImplementation(private val directory: String) : FileManager {
+    private val newFileNumber = AtomicLong(getNewFileNumber())
+
+    override suspend fun uploadFiles(fileItems: List<PartData.FileItem>): List<String> = coroutineScope {
+        val fileNames = List(fileItems.size) { File_Name_Pattern.format(newFileNumber.getAndIncrement()) }
         fileItems.mapIndexed { index, fileItem ->
             async(Dispatchers.IO) {
                 val fileExtension = fileItem.originalFileName?.substringAfterLast('.')
@@ -26,6 +30,19 @@ class FileManagerImplementation(private val directory: String): FileManager {
         }.map { it.await() }
     }
 
+    override suspend fun uploadFile(fileBytes: ByteArray): String? = coroutineScope {
+        async(Dispatchers.IO) {
+            try {
+                with(File(File_Name_Pattern.format(newFileNumber.getAndIncrement()))) {
+                    writeBytes(fileBytes)
+                    return@async name
+                }
+            } catch (exception: Exception) {
+                null
+            }
+        }.await()
+    }
+
     override suspend fun downloadFile(fileName: String): File? = coroutineScope {
         async(Dispatchers.IO) {
             try {
@@ -36,12 +53,14 @@ class FileManagerImplementation(private val directory: String): FileManager {
         }.await()
     }
 
-    override suspend fun getNewFileNumber(): Long = coroutineScope {
-        async(Dispatchers.Default) {
-            val files = File(directory).listFiles() ?: return@async 1
-            files.maxOf { file ->
-                file.nameWithoutExtension.toLongOrNull(16) ?: Long.MIN_VALUE
-            } + 1
-        }.await()
+    /**
+     * Checks last one maximum file and gets new name
+     * @return new file name (number)
+     * */
+    private fun getNewFileNumber(): Long {
+        val files = File(directory).listFiles() ?: return 1
+        return files.maxOf { file ->
+            file.nameWithoutExtension.toLongOrNull(16) ?: Long.MIN_VALUE
+        } + 1
     }
 }

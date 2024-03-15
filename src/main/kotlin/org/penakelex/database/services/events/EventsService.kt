@@ -1,6 +1,5 @@
 package org.penakelex.database.services.events
 
-import org.jetbrains.exposed.sql.ResultRow
 import org.penakelex.database.models.*
 import org.penakelex.response.Result
 
@@ -18,5 +17,4 @@ interface EventsService {
     suspend fun changeUserAsOrganizer(changerID: Int, organizer: EventOrganizer): Result
     suspend fun changeEventInFavourites(userID: Int, eventID: Int): Result
     suspend fun getGlobalEvents(selection: EventSelection): Pair<Result, List<Event>?>
-    fun resultRowToEvent(resultRow: ResultRow): Event
 }

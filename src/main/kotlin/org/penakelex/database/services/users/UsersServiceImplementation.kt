@@ -19,7 +19,12 @@ import java.util.*
 class UsersServiceImplementation(
     private val basicAvatar: String
 ) : UsersService, TableService() {
-    override suspend fun checkIfEmailIsTaken(userEmail: UserEmail): Result = databaseQuery {
+    /**
+     * Checks if email is taken by someone else
+     * @param userEmail email to check
+     * @return if email is free [Result.OK] else [Result.USER_WITH_SUCH_EMAIL_ALREADY_EXISTS]
+     * */
+    private suspend fun checkIfEmailIsTaken(userEmail: UserEmail): Result = databaseQuery {
         Users.select {
             Users.email.eq(userEmail)
         }.singleOrNull() ?: return@databaseQuery Result.OK

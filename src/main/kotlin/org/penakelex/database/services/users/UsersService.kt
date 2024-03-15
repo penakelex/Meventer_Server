@@ -1,7 +1,6 @@
 package org.penakelex.database.services.users
 
 import org.penakelex.database.models.User
-import org.penakelex.database.models.UserEmail
 import org.penakelex.database.models.UserLogin
 import org.penakelex.database.models.UserRegister
 import org.penakelex.response.Result
@@ -10,13 +9,6 @@ import org.penakelex.response.Result
  * Users table service
  * */
 interface UsersService {
-    /**
-     * Checks if email is taken by someone else
-     * @param userEmail email to check
-     * @return if email is free [Result.OK] else [Result.USER_WITH_SUCH_EMAIL_ALREADY_EXISTS]
-     * */
-    suspend fun checkIfEmailIsTaken(userEmail: UserEmail): Result
-
     /**
      * Inserts new user into Users table with checking if the email is free
      * @param user user data to insert

@@ -7,12 +7,17 @@ import jakarta.mail.PasswordAuthentication
 import org.jetbrains.exposed.sql.Database
 import org.koin.dsl.module
 import org.penakelex.database.services.Service
+import org.penakelex.database.services.chats.ChatsServiceImplementation
 import org.penakelex.database.services.events.EventsServiceImplementation
+import org.penakelex.database.services.messages.MessagesServiceImplementation
+import org.penakelex.database.services.sessions.ChatSessionsServiceImplementation
 import org.penakelex.database.services.users.UsersServiceImplementation
 import org.penakelex.database.services.usersEmailCodes.UsersEmailCodesServiceImplementation
 import org.penakelex.database.services.usersFeedback.UsersFeedbackServiceImplementation
+import org.penakelex.fileSystem.FileManager
 import org.penakelex.fileSystem.FileManagerImplementation
 import org.penakelex.routes.Controller
+import org.penakelex.routes.chat.ChatsControllerImplementation
 import org.penakelex.routes.event.EventsControllerImplementation
 import org.penakelex.routes.file.FilesControllerImplementation
 import org.penakelex.routes.user.UsersControllerImplementation
@@ -20,25 +25,14 @@ import org.penakelex.session.JWTValues
 import org.penakelex.session.UserEmailValues
 import java.util.*
 
-/**
- * Main module for dependency injection
- * */
-val mainModule = module {
+val databaseModule = module {
     val config = HoconApplicationConfig(ConfigFactory.load())
-    single {
+    single<Database> {
         Database.connect(
             url = config.property("database.url").getString(),
             user = config.property("database.user").getString(),
             password = config.property("database.password").getString(),
             driver = config.property("database.driver").getString()
-        )
-    }
-    single {
-        JWTValues(
-            audience = config.property("jwt.audience").getString(),
-            issuer = config.property("jwt.issuer").getString(),
-            secret = config.property("jwt.secret").getString(),
-            realm = config.property("jwt.realm").getString()
         )
     }
     single<Service> {
@@ -49,10 +43,29 @@ val mainModule = module {
             usersEmailCodesService = UsersEmailCodesServiceImplementation(),
             eventsService = EventsServiceImplementation(),
             usersFeedbackService = UsersFeedbackServiceImplementation(),
+            chatsService = ChatsServiceImplementation(),
+            messagesService = MessagesServiceImplementation(),
+            chatSessionsService = ChatSessionsServiceImplementation(),
             database = get()
         )
     }
+}
+
+val securityModule = module {
+    val config = HoconApplicationConfig(ConfigFactory.load())
     single {
+        JWTValues(
+            audience = config.property("jwt.audience").getString(),
+            issuer = config.property("jwt.issuer").getString(),
+            secret = config.property("jwt.secret").getString(),
+            realm = config.property("jwt.realm").getString()
+        )
+    }
+}
+
+val emailModule = module {
+    val config = HoconApplicationConfig(ConfigFactory.load())
+    single<Properties> {
         Properties().apply {
             set("mail.smtp.auth", "true")
             set("mail.smtp.starttls.enable", "true")
@@ -60,7 +73,7 @@ val mainModule = module {
             set("mail.smtp.port", "587")
         }
     }
-    single {
+    single<UserEmailValues> {
         UserEmailValues(
             email = config.property("email.email").getString(),
             password = config.property("email.password").getString(),
@@ -76,11 +89,18 @@ val mainModule = module {
                 PasswordAuthentication(emailValues.email, emailValues.password)
         }
     }
-    single {
+}
+
+val fileSystemModule = module {
+    val config = HoconApplicationConfig(ConfigFactory.load())
+    single<FileManager> {
         FileManagerImplementation(
             directory = config.property("file.directory").getString()
         )
     }
+}
+
+val routingModule = module {
     single<Controller> {
         Controller(
             usersController = UsersControllerImplementation(
@@ -97,6 +117,9 @@ val mainModule = module {
             ),
             filesController = FilesControllerImplementation(
                 fileManager = get()
+            ),
+            chatsController = ChatsControllerImplementation(
+                service = get()
             )
         )
     }

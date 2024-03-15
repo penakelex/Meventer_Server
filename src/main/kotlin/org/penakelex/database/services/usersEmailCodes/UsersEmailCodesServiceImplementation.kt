@@ -1,8 +1,10 @@
 package org.penakelex.database.services.usersEmailCodes
 
-import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.update
 import org.penakelex.database.models.UserEmail
 import org.penakelex.database.models.UserEmailCode
 import org.penakelex.database.services.TableService
@@ -62,9 +64,5 @@ class UsersEmailCodesServiceImplementation : UsersEmailCodesService, TableServic
             || expirationTime <= System.currentTimeMillis()
         ) Result.VERIFICATION_CODE_IS_INCORRECT
         else Result.OK
-    }
-
-    override suspend fun deleteExpiredCodes(): Unit = databaseQuery {
-        UsersEmailCodes.deleteWhere { expiration_time lessEq System.currentTimeMillis() }
     }
 }

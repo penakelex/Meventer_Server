@@ -113,5 +113,49 @@ enum class Result(
     USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS(
         HttpStatusCode.Found.value.toUShort(),
         "User with such nickname already exists"
+    ),
+    YOU_ALREADY_HAVE_CHAT_WITH_THIS_USER(
+        HttpStatusCode.Found.value.toUShort(),
+        "You already have chat with this user"
+    ),
+    CHAT_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Chat with such ID not found"
+    ),
+    YOU_CAN_NOT_MANAGE_THIS_CHAT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You can`t manage this chat"
+    ),
+    YOU_CAN_NOT_DELETE_ADMINISTRATOR_FROM_CHAT_AS_ADMINISTRATOR(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You can`t delete administrator from chat as administrator"
+    ),
+    ADMINISTRATOR_MUST_BE_PARTICIPANT_OF_THE_CHAT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "Administrator must be participant of the chat"
+    ),
+    YOU_CAN_NOT_SEND_MESSAGES_IN_THIS_CHAT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You can`t send messages in this chat"
+    ),
+    MESSAGE_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT(
+        HttpStatusCode.NotAcceptable.value.toUShort(),
+        "Message with such ID not found or you can`t change it"
+    ),
+    CHAT_SESSION_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Chat session for user with such ID not found"
+    ),
+    CHAT_SESSION_FOR_USER_WITH_SUCH_ID_AND_SUCH_SESSION_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Chat session for user with such ID and such session ID not found"
+    ),
+    USER_WITH_SUCH_ID_IS_ALREADY_CHAT_CLIENT(
+        HttpStatusCode.Conflict.value.toUShort(),
+        "User with such ID is already chat client"
+    ),
+    CAN_NOT_CREATE_FILE_FROM_GIVEN_BYTES(
+        HttpStatusCode.Conflict.value.toUShort(),
+        "Can`t create file from given bytes"
     )
 }

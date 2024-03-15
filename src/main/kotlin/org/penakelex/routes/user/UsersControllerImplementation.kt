@@ -5,6 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import jakarta.mail.*
+import jakarta.mail.Message
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
 import kotlinx.serialization.json.Json
@@ -67,7 +68,7 @@ class UsersControllerImplementation(
         } ?: return call.respond(
             Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResponse()
         )
-        val images = fileManager.uploadFile(
+        val images = fileManager.uploadFiles(
             fileItems = multiPartData.filterIsInstance<PartData.FileItem>()
         )
         if (images.size > 1) return call.respond(

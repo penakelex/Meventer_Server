@@ -247,7 +247,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         ).map { resultRowToEvent(resultRow = it) }
     }
 
-    override fun resultRowToEvent(resultRow: ResultRow) = Event(
+    private fun resultRowToEvent(resultRow: ResultRow) = Event(
         id = resultRow[Events.id].value,
         name = resultRow[Events.name],
         images = resultRow[Events.images].toList(),
