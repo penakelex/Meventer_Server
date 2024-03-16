@@ -3,7 +3,6 @@ package org.penakelex.routes.chat
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import io.ktor.server.sessions.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.json.Json
@@ -13,26 +12,19 @@ import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
 import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
-import org.penakelex.session.ChatSession
 import org.penakelex.session.USER_ID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.set
 
 class ChatsControllerImplementation(
     private val service: Service
 ) : ChatsController {
     private val clients = ConcurrentHashMap<Int, Client>()
     override suspend fun chatSocket(call: ApplicationCall, webSocketSession: WebSocketSession) {
-        val session = call.sessions.get<ChatSession>()
-        if (session == null) {
-            webSocketSession.close(
-                CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session.")
-            )
-            return
-        }
+        val userID = call.getIntJWTPrincipalClaim(USER_ID)
         try {
             val onJoinResult = onJoin(
-                userID = session.userID,
-                sessionID = session.sessionID,
+                userID = userID,
                 webSocketSession = webSocketSession
             )
             if (onJoinResult != Result.OK) {
@@ -40,7 +32,7 @@ class ChatsControllerImplementation(
             }
             webSocketSession.incoming.consumeEach { frame ->
                 if (frame is Frame.Text) sendMessage(
-                    senderID = session.userID,
+                    senderID = userID,
                     sentMessage = Json.decodeFromString(
                         frame.readText()
                     )
@@ -49,13 +41,12 @@ class ChatsControllerImplementation(
         } catch (exception: Exception) {
             exception.printStackTrace()
         } finally {
-            tryDisconnect(userID = session.userID, sessionID = session.sessionID)
+            tryDisconnect(userID = userID)
         }
     }
 
     private fun onJoin(
         userID: Int,
-        sessionID: Int,
         webSocketSession: WebSocketSession
     ): Result {
         if (clients.containsKey(userID)) {
@@ -63,17 +54,15 @@ class ChatsControllerImplementation(
         }
         clients[userID] = Client(
             userID = userID,
-            sessionID = sessionID,
             webSocketSession = webSocketSession
         )
         return Result.OK
     }
 
-    private suspend fun tryDisconnect(userID: Int, sessionID: Int) {
+    private suspend fun tryDisconnect(userID: Int) {
         if (clients.containsKey(userID)) {
             clients[userID]!!.webSocketSession.close()
             clients.remove(userID)
-            service.chatSessionsService.deleteSession(userID, sessionID)
         }
     }
 

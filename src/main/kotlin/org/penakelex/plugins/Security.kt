@@ -34,6 +34,7 @@ fun Application.configureSecurity() {
                     userID = jwtCredential.payload.getClaim(USER_ID).asInt() ?: return@validate null,
                     password = jwtCredential.payload.getClaim(PASSWORD).asString() ?: return@validate null
                 ) == Result.OK
+                println("$isTokenValid - is token valid")
                 if (isTokenValid) JWTPrincipal(jwtCredential.payload)
                 else null
             }

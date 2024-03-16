@@ -59,8 +59,8 @@ class FileManagerImplementation(private val directory: String) : FileManager {
      * */
     private fun getNewFileNumber(): Long {
         val files = File(directory).listFiles() ?: return 1
-        return files.maxOf { file ->
-            file.nameWithoutExtension.toLongOrNull(16) ?: Long.MIN_VALUE
-        } + 1
+        return (files.maxOfOrNull { file ->
+            file.nameWithoutExtension.toLongOrNull(16) ?: 0
+        } ?: 0L) + 1L
     }
 }
