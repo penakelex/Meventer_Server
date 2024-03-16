@@ -121,9 +121,8 @@ class ChatsControllerImplementation(
         service.chatsService.createDialog(
             firstUserID = call.getIntJWTPrincipalClaim(USER_ID),
             secondUserID = call.receive<Int>()
-        ).first.toResultResponse()
+        ).toResponse()
     )
-
 
     override suspend fun getChatParticipants(call: ApplicationCall) = call.respond(
         service.chatsService.getChatParticipants(

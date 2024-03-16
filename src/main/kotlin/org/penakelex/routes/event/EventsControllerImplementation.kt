@@ -7,7 +7,7 @@ import io.ktor.server.response.*
 import kotlinx.serialization.json.Json
 import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
-import org.penakelex.fileSystem.FileManagerImplementation
+import org.penakelex.fileSystem.FileManager
 import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
@@ -16,7 +16,7 @@ import org.penakelex.session.USER_ID
 
 class EventsControllerImplementation(
     private val service: Service,
-    private val fileManager: FileManagerImplementation
+    private val fileManager: FileManager
 ) : EventsController {
     override suspend fun createEvent(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
@@ -24,11 +24,24 @@ class EventsControllerImplementation(
             Json.decodeFromString(it.value)
         } ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResultResponse())
         val images = fileManager.uploadFiles(multiPartData.filterIsInstance<PartData.FileItem>())
+        val originatorID = call.getIntJWTPrincipalClaim(USER_ID)
+        val (creatingChatResult, chatID) = service.chatsService.createChat(
+            originatorID = originatorID,
+            chat = ChatCreate(
+                name = event.name,
+                administrators = listOf()
+            ),
+            open = true
+        )
+        if (creatingChatResult != Result.OK) {
+            return call.respond(creatingChatResult.toResultResponse())
+        }
         call.respond(
             service.eventsService.insertEvent(
                 event = event,
-                originatorID = call.getIntJWTPrincipalClaim(USER_ID),
-                images = images
+                originatorID = originatorID,
+                images = images,
+                chatID = chatID!!
             ).toResultResponse()
         )
     }
@@ -57,12 +70,18 @@ class EventsControllerImplementation(
         )
     }
 
-    override suspend fun changeUserAsParticipant(call: ApplicationCall) = call.respond(
-        service.eventsService.changeUserAsParticipant(
-            userID = call.getIntJWTPrincipalClaim(USER_ID),
+    override suspend fun changeUserAsParticipant(call: ApplicationCall) {
+        val userID = call.getIntJWTPrincipalClaim(USER_ID)
+        val (changingResult, chatID) = service.eventsService.changeUserAsParticipant(
+            userID = userID,
             eventID = call.receive<Int>()
-        ).toResultResponse()
-    )
+        )
+        if (changingResult == Result.OK) service.chatsService.changeUserAsParticipant(
+            chatID = chatID!!,
+            userID = userID
+        )
+        call.respond(changingResult.toResultResponse())
+    }
 
     override suspend fun changeUserAsOrganizer(call: ApplicationCall) = call.respond(
         service.eventsService.changeUserAsOrganizer(

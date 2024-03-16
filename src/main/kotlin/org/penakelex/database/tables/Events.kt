@@ -14,6 +14,7 @@ object Events : IntIdTable("events") {
     val images = array<String>("images", TextColumnType())
     val description = text("description")
     val start_time = timestamp("start_time")
+    val chat_id = long("chat_id")
     val minimal_age = short("minimal_age").default(0)
     val maximal_age = short("maximum_age").nullable()
     val price = integer("price").default(0)
@@ -23,5 +24,7 @@ object Events : IntIdTable("events") {
     val organizers = array<Int>("organizers", IntegerColumnType())
         .default(arrayOf())
     val in_favourites = array<Int>("in_favourites", IntegerColumnType())
+        .default(arrayOf())
+    val tags = array<String>("tags", TextColumnType())
         .default(arrayOf())
 }

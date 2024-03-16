@@ -2,10 +2,9 @@ package org.penakelex.database.services.users
 
 import org.jetbrains.exposed.sql.insertIgnoreAndGetId
 import org.jetbrains.exposed.sql.select
-import org.penakelex.database.models.User
-import org.penakelex.database.models.UserEmail
-import org.penakelex.database.models.UserLogin
-import org.penakelex.database.models.UserRegister
+import org.jetbrains.exposed.sql.update
+import org.penakelex.database.extenstions.iLike
+import org.penakelex.database.models.*
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Users
 import org.penakelex.ecnryption.cipher
@@ -58,6 +57,67 @@ class UsersServiceImplementation(
             )
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         return@databaseQuery Result.OK to user
+    }
+
+    override suspend fun getUsersByNickname(nickname: String): Pair<Result, List<UserShort>> = databaseQuery {
+        return@databaseQuery Result.OK to Users.select {
+            Users.nickname.iLike("$nickname%")
+        }.map {
+            UserShort(
+                id = it[Users.id].value,
+                nickname = it[Users.nickname],
+                avatar = it[Users.avatar]
+            )
+        }
+    }
+
+    override suspend fun getUserEmail(id: Int): Pair<Result, String?> = databaseQuery {
+        val userEmail = Users.select { Users.id.eq(id) }.singleOrNull()?.let {
+            it[Users.email]
+        } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        return@databaseQuery Result.OK to userEmail
+    }
+
+    override suspend fun updateUserData(
+        userID: Int,
+        userData: UserUpdate,
+        avatar: String?
+    ): Result = databaseQuery {
+        if (userData.nickname != null) {
+            val userWithSameNickname = Users.select {
+                Users.nickname.eq(userData.nickname)
+            }.singleOrNull()
+            if (userWithSameNickname != null) {
+                return@databaseQuery Result.USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS
+            }
+        }
+        Users.update(
+            where = { Users.id.eq(userID) }
+        ) {
+            if (userData.name != null) it[name] = userData.name
+            if (userData.nickname != null) it[nickname] = userData.nickname
+            if (avatar != null) it[Users.avatar] = avatar
+
+        }
+        return@databaseQuery Result.OK
+    }
+
+    override suspend fun updateEmail(userID: Int, email: UserEmail): Result = databaseQuery {
+        Users.update(
+            where = { Users.id.eq(userID) }
+        ) {
+            it[Users.email] = email
+        }
+        return@databaseQuery Result.OK
+    }
+
+    override suspend fun updatePassword(userID: Int, password: String): Result = databaseQuery {
+        Users.update(
+            where = { Users.id.eq(userID) }
+        ) {
+            it[Users.password] = password.cipher()
+        }
+        return@databaseQuery Result.OK
     }
 
     override suspend fun isEmailAndPasswordCorrect(user: UserLogin): Pair<Result, Int?> = databaseQuery {

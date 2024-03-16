@@ -2,6 +2,7 @@ package org.penakelex.database.services.usersFeedback
 
 import org.penakelex.database.models.UserFeedback
 import org.penakelex.database.models.UserFeedbackCreate
+import org.penakelex.database.models.UserFeedbackUpdate
 import org.penakelex.response.Result
 
 interface UsersFeedbackService {
@@ -22,4 +23,6 @@ interface UsersFeedbackService {
      * else [Result.OK]
      * */
     suspend fun getAllFeedbackToUser(id: Int): Pair<Result, List<UserFeedback>?>
+    suspend fun updateFeedback(userID: Int, feedback: UserFeedbackUpdate): Result
+    suspend fun deleteFeedback(userID: Int, feedbackID: Long): Result
 }

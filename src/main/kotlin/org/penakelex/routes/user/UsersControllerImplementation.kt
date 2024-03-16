@@ -11,7 +11,7 @@ import jakarta.mail.internet.MimeMessage
 import kotlinx.serialization.json.Json
 import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
-import org.penakelex.fileSystem.FileManagerImplementation
+import org.penakelex.fileSystem.FileManager
 import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
@@ -29,7 +29,7 @@ class UsersControllerImplementation(
     private val properties: Properties,
     private val userEmailValues: UserEmailValues,
     private val authenticator: Authenticator,
-    private val fileManager: FileManagerImplementation
+    private val fileManager: FileManager
 ) : UsersController {
     override suspend fun sendEmailCode(call: ApplicationCall) {
         val userEmail = call.receive<UserEmail>()
@@ -54,12 +54,13 @@ class UsersControllerImplementation(
 
     override suspend fun verifyEmailCode(call: ApplicationCall) = call.respond(
         service.usersEmailCodesService.verifyCode(
-            call.receive<UserEmailCode>()
+            emailCode = call.receive<UserEmailCode>()
         ).toResultResponse()
     )
 
-    override suspend fun verifyToken(call: ApplicationCall) =
-        call.respond(Result.OK.toResultResponse())
+    override suspend fun verifyToken(call: ApplicationCall) = call.respond(
+        Result.OK.toResultResponse()
+    )
 
     override suspend fun registerUser(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
@@ -105,10 +106,74 @@ class UsersControllerImplementation(
         )
     }
 
-    override suspend fun getUserData(call: ApplicationCall) {
-        val id = call.receive<NullableUserID>().id
-            ?: call.getIntJWTPrincipalClaim(USER_ID)
-        call.respond(service.usersService.getUserData(id).toResponse())
+    override suspend fun getUserData(call: ApplicationCall) = call.respond(
+        service.usersService.getUserData(
+            id = call.receive<NullableUserID>().id
+                ?: call.getIntJWTPrincipalClaim(USER_ID)
+        ).toResponse()
+    )
+
+    override suspend fun getUsersByNickname(call: ApplicationCall) = call.respond(
+        service.usersService.getUsersByNickname(
+            nickname = call.receive<String>()
+        )
+    )
+
+    override suspend fun updateUserData(call: ApplicationCall) {
+        val multiPartData = call.receiveMultipart().readAllParts()
+        val userData: UserUpdate = Json.decodeFromString(
+            string = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.value
+                ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA)
+        )
+        val avatar = fileManager.uploadFiles(
+            fileItems = multiPartData.filterIsInstance<PartData.FileItem>()
+        ).singleOrNull()
+        call.respond(
+            service.usersService.updateUserData(
+                userID = call.getIntJWTPrincipalClaim(USER_ID),
+                userData = userData,
+                avatar = avatar
+            )
+        )
+    }
+
+    override suspend fun updateUserEmail(call: ApplicationCall) {
+        val (emailCode, email) = call.receive<UserUpdateEmail>()
+        val verificationResult = service.usersEmailCodesService.verifyAndDeleteCode(
+            email = email,
+            code = emailCode
+        )
+        if (verificationResult != Result.OK) {
+            return call.respond(verificationResult.toResultResponse())
+        }
+        call.respond(
+            service.usersService.updateEmail(
+                userID = call.getIntJWTPrincipalClaim(USER_ID),
+                email = email
+            )
+        )
+    }
+
+    override suspend fun updateUserPassword(call: ApplicationCall) {
+        val (emailCode, password) = call.receive<UserUpdatePassword>()
+        val userID = call.getIntJWTPrincipalClaim(USER_ID)
+        val (gettingUserEmailResult, email) = service.usersService.getUserEmail(id = userID)
+        if (gettingUserEmailResult != Result.OK) {
+            return call.respond(gettingUserEmailResult.toResultResponse())
+        }
+        val verificationResult = service.usersEmailCodesService.verifyAndDeleteCode(
+            email = email!!,
+            code = emailCode
+        )
+        if (verificationResult != Result.OK) {
+            return call.respond(verificationResult.toResultResponse())
+        }
+        call.respond(
+            service.usersService.updatePassword(
+                userID = userID,
+                password = password
+            ).toResultResponse()
+        )
     }
 
     override suspend fun createFeedback(call: ApplicationCall) = call.respond(
@@ -118,11 +183,25 @@ class UsersControllerImplementation(
         ).toResultResponse()
     )
 
-    override suspend fun getFeedbackToUser(call: ApplicationCall) {
-        val id = call.receive<NullableUserID>().id
-            ?: call.getIntJWTPrincipalClaim(USER_ID)
-        call.respond(
-            service.usersFeedbackService.getAllFeedbackToUser(id = id).toResponse()
-        )
-    }
+    override suspend fun getFeedbackToUser(call: ApplicationCall) = call.respond(
+        service.usersFeedbackService.getAllFeedbackToUser(
+            id = call.receive<NullableUserID>().id
+                ?: call.getIntJWTPrincipalClaim(USER_ID)
+        ).toResponse()
+    )
+
+
+    override suspend fun updateFeedback(call: ApplicationCall) = call.respond(
+        service.usersFeedbackService.updateFeedback(
+            userID = call.getIntJWTPrincipalClaim(USER_ID),
+            feedback = call.receive<UserFeedbackUpdate>()
+        ).toResultResponse()
+    )
+
+    override suspend fun deleteFeedback(call: ApplicationCall) = call.respond(
+        service.usersFeedbackService.deleteFeedback(
+            userID = call.getIntJWTPrincipalClaim(USER_ID),
+            feedbackID = call.receive<Long>()
+        ).toResultResponse()
+    )
 }

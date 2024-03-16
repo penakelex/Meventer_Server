@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.orIfNotNull
+import org.penakelex.database.extenstions.eqAny
 import org.penakelex.database.extenstions.iLike
 import org.penakelex.database.models.EventSelection
 import org.penakelex.database.tables.Events
@@ -29,13 +30,14 @@ fun EventSelection.getSelectExpression(): Op<Boolean> {
 
 private fun EventSelection.getTagsExpression(): Op<Boolean>? {
     if (tags == null) return null
-    var expression = Events.name.iLike("%${tags.first()}%") or
-            Events.description.iLike("%${tags.first()}%")
-    for (i in 1..tags.lastIndex) {
-        expression = expression or
-                Events.name.iLike("%${tags[i]}%") or
-                Events.description.iLike("%${tags[i]}%")
-    }
+    val firstTag = tags.first()
+    var expression = Events.name.iLike("%${firstTag}%") or
+            Events.description.iLike("%${firstTag}%") or
+            Events.tags.eqAny(firstTag)
+    for (i in 1..tags.lastIndex) expression = expression or
+            Events.name.iLike("%${tags[i]}%") or
+            Events.description.iLike("%${tags[i]}%") or
+            Events.tags.eqAny(tags[i])
     return expression
 }
 

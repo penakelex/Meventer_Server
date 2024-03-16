@@ -1,8 +1,10 @@
 package org.penakelex.database.services.usersFeedback
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.penakelex.database.models.UserFeedback
 import org.penakelex.database.models.UserFeedbackCreate
+import org.penakelex.database.models.UserFeedbackUpdate
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Users
 import org.penakelex.database.tables.UsersFeedback
@@ -34,6 +36,7 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
         val feedbacks = UsersFeedback.select { UsersFeedback.to_user_id.eq(id) }
             .orderBy(UsersFeedback.id to SortOrder.ASC).map {
                 UserFeedback(
+                    id = it[UsersFeedback.id].value,
                     fromUserID = it[UsersFeedback.from_user_id],
                     rating = it[UsersFeedback.rating],
                     comment = it[UsersFeedback.comment]
@@ -41,5 +44,28 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
             }
         if (feedbacks.isEmpty()) return@databaseQuery Result.FEEDBACKS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
         return@databaseQuery Result.OK to feedbacks
+    }
+
+    override suspend fun updateFeedback(userID: Int, feedback: UserFeedbackUpdate): Result = databaseQuery {
+        val updatedFeedbacksCount = UsersFeedback.update(
+            where = { UsersFeedback.id.eq(feedback.id) and UsersFeedback.from_user_id.eq(userID) }
+        ) {
+            it[rating] = feedback.rating
+            it[comment] = feedback.comment
+        }
+        if (updatedFeedbacksCount == 1) {
+            return@databaseQuery Result.FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT
+        }
+        return@databaseQuery Result.OK
+    }
+
+    override suspend fun deleteFeedback(userID: Int, feedbackID: Long): Result = databaseQuery {
+        val deletedFeedbacksCount = UsersFeedback.deleteWhere {
+            UsersFeedback.id.eq(feedbackID) and from_user_id.eq(userID)
+        }
+        if (deletedFeedbacksCount != 1) {
+            return@databaseQuery Result.FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT
+        }
+        return@databaseQuery Result.OK
     }
 }

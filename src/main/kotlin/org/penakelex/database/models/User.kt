@@ -58,3 +58,28 @@ data class User(
 data class NullableUserID(
     val id: Int?
 )
+
+@Serializable
+data class UserUpdate(
+    val nickname: String?,
+    val name: String?,
+)
+
+@Serializable
+data class UserUpdateEmail(
+    val emailCode: String,
+    val email: String,
+)
+
+@Serializable
+data class UserUpdatePassword(
+    val emailCode: String,
+    val newPassword: String
+)
+
+@Serializable
+data class UserShort(
+    val id: Int,
+    val nickname: String,
+    val avatar: String
+)

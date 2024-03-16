@@ -16,23 +16,26 @@ class EventsServiceImplementation : TableService(), EventsService {
     override suspend fun insertEvent(
         event: EventCreate,
         originatorID: Int,
-        images: List<String>
+        images: List<String>,
+        chatID: Long
     ): Result = databaseQuery {
         Events.insert {
             it[originator] = originatorID
             it[name] = event.name
             it[Events.images] = images.toTypedArray()
+            it[chat_id] = chatID
             it[description] = event.description
             it[start_time] = event.startTime
             if (event.minimalAge != null) it[minimal_age] = event.minimalAge
             it[maximal_age] = event.maximalAge
             if (event.price != null) it[price] = event.price
+            if (event.tags != null) it[tags] = event.tags.toTypedArray()
         }
         return@databaseQuery Result.OK
     }
 
     override suspend fun updateEvent(event: EventUpdate, organizerID: Int): Result = databaseQuery {
-        Events.update(
+        val updatedEventsCount = Events.update(
             where = {
                 Events.id.eq(event.eventID) and (
                         Events.originator.eq(organizerID) or Events.organizers.eqAny(organizerID)
@@ -45,6 +48,10 @@ class EventsServiceImplementation : TableService(), EventsService {
             if (event.minimalAge != null) it[minimal_age] = event.minimalAge
             if (event.maximalAge != null) it[maximal_age] = event.maximalAge
             if (event.price != null) it[price] = event.price
+            if (event.tags != null) it[tags] = event.tags.toTypedArray()
+        }
+        if (updatedEventsCount != 1) {
+            return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
         }
         return@databaseQuery Result.OK
     }
@@ -147,28 +154,29 @@ class EventsServiceImplementation : TableService(), EventsService {
         else Result.OK to events
     }
 
-    override suspend fun changeUserAsParticipant(userID: Int, eventID: Int): Result = databaseQuery {
-        val (participants, organizers, eventRequirements) = Events.select {
+    override suspend fun changeUserAsParticipant(userID: Int, eventID: Int): Pair<Result, Long?> = databaseQuery {
+        val (participants, organizers, eventRequirements, chatID) = Events.select {
             Events.id.eq(eventID)
         }.singleOrNull()?.let {
             if (it[Events.originator] == userID) {
-                return@databaseQuery Result.AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE
+                return@databaseQuery Result.AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE to null
             }
-            return@let Triple(
-                it[Events.participants],
-                it[Events.organizers],
-                EventRequirements(
+            return@let EventSelectParticipant(
+                participants = it[Events.participants],
+                organizers = it[Events.organizers],
+                eventRequirements = EventRequirements(
                     minimalAge = it[Events.minimal_age],
                     maximalAge = it[Events.maximal_age]
-                )
+                ),
+                chatID = it[Events.chat_id]
             )
-        } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
+        } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND to null
         val userAge = Users.select { Users.id.eq(userID) }.singleOrNull()?.let {
             it[Users.date_of_birth].getAgeOfPersonToday()
-        } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
+        } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         val permittedAges = eventRequirements.minimalAge..(eventRequirements.maximalAge ?: Short.MAX_VALUE)
         if (userAge !in permittedAges) {
-            return@databaseQuery Result.YOUR_AGE_DOES_NOT_MATCH_THE_REQUIRED_BY_THE_EVENT_ORGANIZERS
+            return@databaseQuery Result.YOUR_AGE_DOES_NOT_MATCH_THE_REQUIRED_BY_THE_EVENT_ORGANIZERS to null
         }
         Events.update(
             where = { Events.id.eq(eventID) }
@@ -181,7 +189,7 @@ class EventsServiceImplementation : TableService(), EventsService {
                 it[Events.organizers] = organizers.filter { id -> id != userID }.toTypedArray()
             }
         }
-        return@databaseQuery Result.OK
+        return@databaseQuery Result.OK to chatID
     }
 
     override suspend fun changeUserAsOrganizer(changerID: Int, organizer: EventOrganizer): Result = databaseQuery {

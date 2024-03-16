@@ -157,5 +157,9 @@ enum class Result(
     CAN_NOT_CREATE_FILE_FROM_GIVEN_BYTES(
         HttpStatusCode.Conflict.value.toUShort(),
         "Can`t create file from given bytes"
+    ),
+    FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT(
+        HttpStatusCode.NotFound.value.toUShort(),
+        "Feedback with such ID not found or you can`t change it"
     )
 }

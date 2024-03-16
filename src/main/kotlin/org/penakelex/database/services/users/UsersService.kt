@@ -1,8 +1,6 @@
 package org.penakelex.database.services.users
 
-import org.penakelex.database.models.User
-import org.penakelex.database.models.UserLogin
-import org.penakelex.database.models.UserRegister
+import org.penakelex.database.models.*
 import org.penakelex.response.Result
 
 /**
@@ -22,6 +20,11 @@ interface UsersService {
      * @return
      * */
     suspend fun getUserData(id: Int): Pair<Result, User?>
+    suspend fun getUsersByNickname(nickname: String): Pair<Result, List<UserShort>>
+    suspend fun getUserEmail(id: Int): Pair<Result, String?>
+    suspend fun updateUserData(userID: Int, userData: UserUpdate, avatar: String?): Result
+    suspend fun updateEmail(userID: Int, email: UserEmail): Result
+    suspend fun updatePassword(userID: Int, password: String): Result
 
     /**
      * Checks if user email and password matches those from database

@@ -50,7 +50,8 @@ data class EventCreate(
     val startTime: Instant,
     val minimalAge: Short?,
     val maximalAge: Short?,
-    val price: Int?
+    val price: Int?,
+    val tags: List<String>?
 )
 
 /**
@@ -122,7 +123,8 @@ data class EventUpdate(
     val startTime: Instant?,
     val minimalAge: Short?,
     val maximalAge: Short?,
-    val price: Int?
+    val price: Int?,
+    val tags: List<String>?
 )
 
 /**
@@ -133,4 +135,11 @@ data class EventUpdate(
 data class EventRequirements(
     val minimalAge: Short,
     val maximalAge: Short?
+)
+
+data class EventSelectParticipant(
+    val participants: Array<Int>,
+    val organizers: Array<Int>,
+    val eventRequirements: EventRequirements,
+    val chatID: Long
 )
