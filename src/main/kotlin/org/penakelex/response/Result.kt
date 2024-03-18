@@ -142,14 +142,6 @@ enum class Result(
         HttpStatusCode.NotAcceptable.value.toUShort(),
         "Message with such ID not found or you can`t change it"
     ),
-    CHAT_SESSION_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NotFound.value.toUShort(),
-        "Chat session for user with such ID not found"
-    ),
-    CHAT_SESSION_FOR_USER_WITH_SUCH_ID_AND_SUCH_SESSION_ID_NOT_FOUND(
-        HttpStatusCode.NotFound.value.toUShort(),
-        "Chat session for user with such ID and such session ID not found"
-    ),
     USER_WITH_SUCH_ID_IS_ALREADY_CHAT_CLIENT(
         HttpStatusCode.Conflict.value.toUShort(),
         "User with such ID is already chat client"
