@@ -3,7 +3,6 @@ package org.penakelex.routes.chat
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import io.ktor.server.sessions.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.json.Json
@@ -13,49 +12,39 @@ import org.penakelex.response.Result
 import org.penakelex.response.toResponse
 import org.penakelex.response.toResultResponse
 import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
-import org.penakelex.session.ChatSession
 import org.penakelex.session.USER_ID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.set
 
 class ChatsControllerImplementation(
     private val service: Service
 ) : ChatsController {
     private val clients = ConcurrentHashMap<Int, Client>()
     override suspend fun chatSocket(call: ApplicationCall, webSocketSession: WebSocketSession) {
-        val session = call.sessions.get<ChatSession>()
-        if (session == null) {
-            webSocketSession.close(
-                CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session.")
-            )
-            return
-        }
+        val userID = call.getIntJWTPrincipalClaim(USER_ID)
         try {
             val onJoinResult = onJoin(
-                userID = session.userID,
-                sessionID = session.sessionID,
+                userID = userID,
                 webSocketSession = webSocketSession
             )
             if (onJoinResult != Result.OK) {
                 call.respond(onJoinResult.toResultResponse())
             }
             webSocketSession.incoming.consumeEach { frame ->
-                if (frame is Frame.Text) sendMessage(
-                    senderID = session.userID,
-                    sentMessage = Json.decodeFromString(
-                        frame.readText()
-                    )
+                if (frame is Frame.Text) selectMessage(
+                    userID = userID,
+                    message = frame.readText()
                 )
             }
         } catch (exception: Exception) {
             exception.printStackTrace()
         } finally {
-            tryDisconnect(userID = session.userID, sessionID = session.sessionID)
+            tryDisconnect(userID = userID)
         }
     }
 
     private fun onJoin(
         userID: Int,
-        sessionID: Int,
         webSocketSession: WebSocketSession
     ): Result {
         if (clients.containsKey(userID)) {
@@ -63,17 +52,44 @@ class ChatsControllerImplementation(
         }
         clients[userID] = Client(
             userID = userID,
-            sessionID = sessionID,
             webSocketSession = webSocketSession
         )
         return Result.OK
     }
 
-    private suspend fun tryDisconnect(userID: Int, sessionID: Int) {
+    private suspend fun tryDisconnect(userID: Int) {
         if (clients.containsKey(userID)) {
             clients[userID]!!.webSocketSession.close()
             clients.remove(userID)
-            service.chatSessionsService.deleteSession(userID, sessionID)
+        }
+    }
+
+    private suspend fun selectMessage(
+        userID: Int,
+        message: String
+    ) {
+        try {
+            sendMessage(
+                senderID = userID,
+                sentMessage = Json.decodeFromString(message)
+            )
+            return
+        } catch (_: Exception) {
+        }
+        try {
+            updateMessage(
+                updaterID = userID,
+                updatedMessage = Json.decodeFromString(message)
+            )
+            return
+        } catch (_: Exception) {
+        }
+        try {
+            deleteMessage(
+                deleterID = userID,
+                deletedMessage = Json.decodeFromString(message)
+            )
+        } catch (_: Exception) {
         }
     }
 
@@ -89,23 +105,75 @@ class ChatsControllerImplementation(
             senderID = senderID, message = sentMessage
         )
         if (messageInsertResult != Result.OK) return
-        val encodedMessage = Json.encodeToString(
-            serializer = Message.serializer(),
-            value = Message(
-                id = messageID!!,
-                chatID = sentMessage.chatID,
-                senderID = senderID,
-                body = sentMessage.body,
-                timestamp = sentMessage.timestamp,
-                attachment = sentMessage.attachment
+        sendToClients(
+            chatParticipants = chatParticipants!!.toSet(),
+            message = Json.encodeToString(
+                serializer = Message.serializer(),
+                value = Message(
+                    id = messageID!!,
+                    chatID = sentMessage.chatID,
+                    senderID = senderID,
+                    body = sentMessage.body,
+                    timestamp = sentMessage.timestamp,
+                    attachment = sentMessage.attachment
+                )
             )
         )
-        val chatParticipantSet = chatParticipants!!.toSet()
+    }
+
+    private suspend fun updateMessage(
+        updaterID: Int,
+        updatedMessage: MessageUpdate
+    ) {
+        val (gettingChatParticipantsResult, chatParticipants) = service.chatsService.getChatParticipants(
+            chatID = updatedMessage.chatID
+        )
+        if (gettingChatParticipantsResult != Result.OK) return
+        val messageUpdateResult = service.messagesService.updateMessage(
+            message = updatedMessage,
+            updaterID = updaterID
+        )
+        if (messageUpdateResult != Result.OK) return
+        sendToClients(
+            chatParticipants = chatParticipants!!.toSet(),
+            message = Json.encodeToString(
+                MessageUpdated.serializer(),
+                MessageUpdated(
+                    id = updatedMessage.id,
+                    body = updatedMessage.body
+                )
+            )
+        )
+    }
+
+    private suspend fun deleteMessage(
+        deleterID: Int,
+        deletedMessage: MessageDelete
+    ) {
+        val (gettingChatParticipantsResult, chatParticipants) = service.chatsService.getChatParticipants(
+            chatID = deletedMessage.chatID
+        )
+        if (gettingChatParticipantsResult != Result.OK) return
+        val messageDeleteResult = service.messagesService.deleteMessage(
+            messageID = deletedMessage.id,
+            deleterID = deleterID
+        )
+        if (messageDeleteResult != Result.OK) return
+        sendToClients(
+            chatParticipants = chatParticipants!!.toSet(),
+            message = deletedMessage.id.toString()
+        )
+    }
+
+    private suspend fun sendToClients(
+        chatParticipants: Set<Int>,
+        message: String
+    ) {
         val chatParticipantsClients = clients.values.filter { client ->
-            client.userID in chatParticipantSet
+            client.userID in chatParticipants
         }
         for (client in chatParticipantsClients) {
-            client.webSocketSession.send(encodedMessage)
+            client.webSocketSession.send(message)
         }
     }
 
@@ -135,6 +203,25 @@ class ChatsControllerImplementation(
             userID = call.getIntJWTPrincipalClaim(USER_ID)
         ).toResponse()
     )
+
+    override suspend fun getAllMessages(call: ApplicationCall) {
+        val chatID = call.receive<Long>()
+        val userID = call.getIntJWTPrincipalClaim(USER_ID)
+        val (gettingChatParticipantsResult, participants) = service.chatsService.getChatParticipants(
+            chatID = chatID
+        )
+        if (gettingChatParticipantsResult != Result.OK) {
+            return call.respond(gettingChatParticipantsResult.toResponse())
+        }
+        if (userID !in participants!!) {
+            return call.respond(Result.YOU_ARE_NOT_PARTICIPANT_OF_THIS_CHAT.toResponse())
+        }
+        call.respond(
+            service.messagesService.getAllMessages(
+                chatID = chatID
+            ).toResponse()
+        )
+    }
 
     override suspend fun changeUserAsParticipant(call: ApplicationCall) {
         val (chatID, changingID) = call.receive<ChatParticipantUpdate>()

@@ -26,6 +26,19 @@ data class Message(
 
 @Serializable
 data class MessageUpdate(
+    val id: Long,
     val chatID: Long,
     val body: String
+)
+
+@Serializable
+data class MessageUpdated(
+    val id: Long,
+    val body: String
+)
+
+@Serializable
+data class MessageDelete(
+    val id: Long,
+    val chatID: Long
 )

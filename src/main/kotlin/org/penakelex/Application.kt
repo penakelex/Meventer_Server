@@ -8,7 +8,6 @@ fun main(args: Array<String>) =
 
 fun Application.module() {
     configureDI()
-    configureSessions()
     configureSockets()
     configureSerialization()
     configureSecurity()

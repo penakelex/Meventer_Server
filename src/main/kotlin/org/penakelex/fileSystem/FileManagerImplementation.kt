@@ -4,6 +4,7 @@ import io.ktor.http.content.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.atomic.AtomicLong
@@ -59,8 +60,20 @@ class FileManagerImplementation(private val directory: String) : FileManager {
      * */
     private fun getNewFileNumber(): Long {
         val files = File(directory).listFiles() ?: return 1
-        return files.maxOf { file ->
-            file.nameWithoutExtension.toLongOrNull(16) ?: Long.MIN_VALUE
-        } + 1
+        return (files.maxOfOrNull { file ->
+            file.nameWithoutExtension.toLongOrNull(16) ?: 0
+        } ?: 0L) + 1L
+    }
+
+    override suspend fun deleteFiles(fileNames: List<String>?): Unit = coroutineScope {
+        if (fileNames == null) return@coroutineScope
+        launch(Dispatchers.IO) {
+            for (fileName in fileNames) {
+                try {
+                    File("$directory/$fileName").delete()
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 }

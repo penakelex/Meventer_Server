@@ -10,7 +10,6 @@ import org.penakelex.database.services.Service
 import org.penakelex.database.services.chats.ChatsServiceImplementation
 import org.penakelex.database.services.events.EventsServiceImplementation
 import org.penakelex.database.services.messages.MessagesServiceImplementation
-import org.penakelex.database.services.sessions.ChatSessionsServiceImplementation
 import org.penakelex.database.services.users.UsersServiceImplementation
 import org.penakelex.database.services.usersEmailCodes.UsersEmailCodesServiceImplementation
 import org.penakelex.database.services.usersFeedback.UsersFeedbackServiceImplementation
@@ -45,7 +44,6 @@ val databaseModule = module {
             usersFeedbackService = UsersFeedbackServiceImplementation(),
             chatsService = ChatsServiceImplementation(),
             messagesService = MessagesServiceImplementation(),
-            chatSessionsService = ChatSessionsServiceImplementation(),
             database = get()
         )
     }

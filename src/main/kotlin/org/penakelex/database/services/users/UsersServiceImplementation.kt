@@ -52,6 +52,8 @@ class UsersServiceImplementation(
             User(
                 id = it[Users.id].value,
                 email = it[Users.email],
+                name = it[Users.name],
+                nickname = it[Users.nickname],
                 avatar = it[Users.avatar],
                 dateOfBirth = it[Users.date_of_birth]
             )

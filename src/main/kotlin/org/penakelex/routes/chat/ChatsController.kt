@@ -9,6 +9,7 @@ interface ChatsController {
     suspend fun createDialog(call: ApplicationCall)
     suspend fun getChatParticipants(call: ApplicationCall)
     suspend fun getAllChats(call: ApplicationCall)
+    suspend fun getAllMessages(call: ApplicationCall)
     suspend fun changeUserAsParticipant(call: ApplicationCall)
     suspend fun changeParticipantAsAdministrator(call: ApplicationCall)
     suspend fun updateChatName(call: ApplicationCall)

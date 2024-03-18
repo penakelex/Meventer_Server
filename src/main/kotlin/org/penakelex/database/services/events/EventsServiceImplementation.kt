@@ -34,7 +34,21 @@ class EventsServiceImplementation : TableService(), EventsService {
         return@databaseQuery Result.OK
     }
 
-    override suspend fun updateEvent(event: EventUpdate, organizerID: Int): Result = databaseQuery {
+    override suspend fun updateEvent(
+        event: EventUpdate,
+        organizerID: Int,
+        newImages: List<String>
+    ): Result = databaseQuery {
+        val isNewImagesIsNotEmpty = newImages.isNotEmpty()
+        var images = if (event.deletedImages != null || isNewImagesIsNotEmpty) Events.select {
+            Events.id.eq(event.eventID) and (
+                    Events.originator.eq(organizerID) or Events.organizers.eqAny(organizerID)
+                    )
+        }.singleOrNull()?.let {
+            it[Events.images].toList()
+        } else null
+        if (event.deletedImages != null) images = images?.filter { image -> image !in event.deletedImages }
+        if (isNewImagesIsNotEmpty) images = images?.plus(newImages) ?: newImages
         val updatedEventsCount = Events.update(
             where = {
                 Events.id.eq(event.eventID) and (
@@ -49,6 +63,7 @@ class EventsServiceImplementation : TableService(), EventsService {
             if (event.maximalAge != null) it[maximal_age] = event.maximalAge
             if (event.price != null) it[price] = event.price
             if (event.tags != null) it[tags] = event.tags.toTypedArray()
+            if (images != null) it[Events.images] = images.toTypedArray()
         }
         if (updatedEventsCount != 1) {
             return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
@@ -265,6 +280,8 @@ class EventsServiceImplementation : TableService(), EventsService {
         maximalAge = resultRow[Events.maximal_age],
         price = resultRow[Events.price],
         originator = resultRow[Events.originator],
-        organizers = resultRow[Events.organizers].toList()
+        organizers = resultRow[Events.organizers].toList(),
+        participants = resultRow[Events.participants].toList(),
+        inFavourites = resultRow[Events.in_favourites].toList()
     )
 }

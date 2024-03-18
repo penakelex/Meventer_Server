@@ -60,7 +60,7 @@ class MessagesServiceImplementation : TableService(), MessagesService {
 
     override suspend fun updateMessage(message: MessageUpdate, updaterID: Int): Result = databaseQuery {
         val updatedMessagesCount = Messages.update(
-            where = { Messages.chat_id.eq(message.chatID) and Messages.sender_id.eq(updaterID) }
+            where = { Messages.id.eq(message.id) and Messages.sender_id.eq(updaterID) }
         ) {
             it[body] = message.body
         }

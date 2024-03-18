@@ -31,7 +31,9 @@ data class Event(
     val maximalAge: Short?,
     val price: Int,
     val originator: Int,
-    val organizers: List<Int>
+    val organizers: List<Int>,
+    val participants: List<Int>,
+    val inFavourites: List<Int>
 )
 
 /**
@@ -124,7 +126,8 @@ data class EventUpdate(
     val minimalAge: Short?,
     val maximalAge: Short?,
     val price: Int?,
-    val tags: List<String>?
+    val tags: List<String>?,
+    val deletedImages: List<String>?
 )
 
 /**

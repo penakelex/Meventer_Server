@@ -161,5 +161,9 @@ enum class Result(
     FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT(
         HttpStatusCode.NotFound.value.toUShort(),
         "Feedback with such ID not found or you can`t change it"
+    ),
+    YOU_ARE_NOT_PARTICIPANT_OF_THIS_CHAT(
+        HttpStatusCode.Forbidden.value.toUShort(),
+        "You aren`t participant of this chat"
     )
 }

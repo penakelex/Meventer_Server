@@ -46,12 +46,21 @@ class EventsControllerImplementation(
         )
     }
 
-    override suspend fun updateEvent(call: ApplicationCall) = call.respond(
-        service.eventsService.updateEvent(
-            event = call.receive<EventUpdate>(),
-            organizerID = call.getIntJWTPrincipalClaim(USER_ID)
-        ).toResultResponse()
-    )
+    override suspend fun updateEvent(call: ApplicationCall) {
+        val multiPartData = call.receiveMultipart().readAllParts()
+        val event: EventUpdate = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.let {
+            Json.decodeFromString(it.value)
+        } ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResultResponse())
+        val newImages = fileManager.uploadFiles(multiPartData.filterIsInstance<PartData.FileItem>())
+        call.respond(
+            service.eventsService.updateEvent(
+                event = event,
+                organizerID = call.getIntJWTPrincipalClaim(USER_ID),
+                newImages = newImages
+            ).toResultResponse()
+        )
+        fileManager.deleteFiles(event.deletedImages)
+    }
 
     override suspend fun deleteEvent(call: ApplicationCall) = call.respond(
         service.eventsService.deleteEvent(
