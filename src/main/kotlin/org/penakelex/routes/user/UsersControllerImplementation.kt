@@ -116,14 +116,14 @@ class UsersControllerImplementation(
     override suspend fun getUsersByNickname(call: ApplicationCall) = call.respond(
         service.usersService.getUsersByNickname(
             nickname = call.receive<String>()
-        )
+        ).toResponse()
     )
 
     override suspend fun updateUserData(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
         val userData: UserUpdate = Json.decodeFromString(
             string = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.value
-                ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA)
+                ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResultResponse())
         )
         val avatar = fileManager.uploadFiles(
             fileItems = multiPartData.filterIsInstance<PartData.FileItem>()
@@ -133,7 +133,7 @@ class UsersControllerImplementation(
                 userID = call.getIntJWTPrincipalClaim(USER_ID),
                 userData = userData,
                 avatar = avatar
-            )
+            ).toResultResponse()
         )
     }
 
@@ -150,7 +150,7 @@ class UsersControllerImplementation(
             service.usersService.updateEmail(
                 userID = call.getIntJWTPrincipalClaim(USER_ID),
                 email = email
-            )
+            ).toResultResponse()
         )
     }
 
@@ -189,7 +189,6 @@ class UsersControllerImplementation(
                 ?: call.getIntJWTPrincipalClaim(USER_ID)
         ).toResponse()
     )
-
 
     override suspend fun updateFeedback(call: ApplicationCall) = call.respond(
         service.usersFeedbackService.updateFeedback(

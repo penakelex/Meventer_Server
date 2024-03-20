@@ -282,6 +282,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         originator = resultRow[Events.originator],
         organizers = resultRow[Events.organizers].toList(),
         participants = resultRow[Events.participants].toList(),
-        inFavourites = resultRow[Events.in_favourites].toList()
+        inFavourites = resultRow[Events.in_favourites].toList(),
+        tags = resultRow[Events.tags].toList()
     )
 }

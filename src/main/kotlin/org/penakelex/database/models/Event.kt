@@ -33,7 +33,8 @@ data class Event(
     val originator: Int,
     val organizers: List<Int>,
     val participants: List<Int>,
-    val inFavourites: List<Int>
+    val inFavourites: List<Int>,
+    val tags: List<String>
 )
 
 /**

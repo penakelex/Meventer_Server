@@ -13,21 +13,24 @@ import org.penakelex.database.tables.Users
 import org.penakelex.response.Result
 
 class ChatsServiceImplementation : TableService(), ChatsService {
-    override suspend fun createChat(originatorID: Int, chat: ChatCreate, open: Boolean): Pair<Result, Long?> =
-        databaseQuery {
-            val existingAdministratorsIDsCount = Users.select {
-                Users.id.inList(chat.administrators)
-            }.count().toInt()
-            if (existingAdministratorsIDsCount != chat.administrators.size) {
-                return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
-            }
-            return@databaseQuery Result.OK to Chats.insertAndGetId {
-                it[name] = chat.name
-                it[originator] = originatorID
-                it[administrators] = chat.administrators.sorted().toTypedArray()
-                it[participants] = chat.administrators.plus(originatorID).sorted().toTypedArray()
-            }.value
+    override suspend fun createChat(
+        originatorID: Int,
+        chat: ChatCreate,
+        open: Boolean
+    ): Pair<Result, Long?> = databaseQuery {
+        val existingAdministratorsIDsCount = Users.select {
+            Users.id.inList(chat.administrators)
+        }.count().toInt()
+        if (existingAdministratorsIDsCount != chat.administrators.size) {
+            return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         }
+        return@databaseQuery Result.OK to Chats.insertAndGetId {
+            it[name] = chat.name
+            it[originator] = originatorID
+            it[administrators] = chat.administrators.sorted().toTypedArray()
+            it[participants] = chat.administrators.plus(originatorID).sorted().toTypedArray()
+        }.value
+    }
 
     override suspend fun createDialog(firstUserID: Int, secondUserID: Int): Pair<Result, Long?> = databaseQuery {
         val isDialogExists = Chats.select {

@@ -15,7 +15,10 @@ fun Route.chatRoutes(controller: ChatsController) = route("/chat") {
             post("/dialog") { controller.createDialog(call) }
         }
         post("/participants") { controller.getChatParticipants(call) }
-        post("/getAll") { controller.getAllChats(call) }
+        route("/getAll") {
+            post("/chats") { controller.getAllChats(call) }
+            post("/messages") { controller.getAllMessages(call) }
+        }
         route("/change") {
             post("/participant") { controller.changeUserAsParticipant(call) }
             post("/administrator") { controller.changeParticipantAsAdministrator(call) }
