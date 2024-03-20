@@ -157,5 +157,9 @@ enum class Result(
     YOU_ARE_NOT_PARTICIPANT_OF_THIS_CHAT(
         HttpStatusCode.Forbidden.value.toUShort(),
         "You aren`t participant of this chat"
+    ),
+    NOTHING_TO_CHANGE(
+        HttpStatusCode.NotAcceptable.value.toUShort(),
+        "Nothing to change"
     )
 }

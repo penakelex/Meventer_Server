@@ -128,6 +128,9 @@ class UsersControllerImplementation(
         val avatar = fileManager.uploadFiles(
             fileItems = multiPartData.filterIsInstance<PartData.FileItem>()
         ).singleOrNull()
+        if (avatar == null && userData.nickname == null && userData.name == null) {
+            return call.respond(Result.NOTHING_TO_CHANGE.toResultResponse())
+        }
         call.respond(
             service.usersService.updateUserData(
                 userID = call.getIntJWTPrincipalClaim(USER_ID),
