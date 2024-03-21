@@ -6,18 +6,17 @@ import io.ktor.server.netty.*
 import org.penakelex.plugins.*
 
 fun main() {
-    val environment = applicationEngineEnvironment {
-        connector {
-            host = "0.0.0.0"
-            port = 8080
-        }
-        connector {
-            host = "0.0.0.0"
-            port = 8085
-        }
-        module(Application::module)
-    }
-    embeddedServer(Netty, environment).start(true)
+    embeddedServer(
+        Netty,
+        port = 8080,
+        host = "0.0.0.0"
+    ) {
+        configureDI()
+        configureSockets()
+        configureSerialization()
+        configureSecurity()
+        configureRouting()
+    }.start(true)
 }
 
 fun Application.module() {
