@@ -4,11 +4,10 @@ import com.auth0.jwt.JWT
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
-import io.ktor.server.response.*
 import org.koin.ktor.ext.inject
 import org.penakelex.database.services.Service
 import org.penakelex.response.Result
-import org.penakelex.response.toResultResponse
+import org.penakelex.response.toHttpStatusCode
 import org.penakelex.session.JWTValues
 import org.penakelex.session.PASSWORD
 import org.penakelex.session.USER_ID
@@ -29,15 +28,21 @@ fun Application.configureSecurity() {
             )
             validate { jwtCredential ->
                 val isTokenExpired = jwtCredential.payload.expiresAt.time <= System.currentTimeMillis()
-                if (isTokenExpired) return@validate null
-                val isTokenValid = service.usersService.isTokenValid(
-                    userID = jwtCredential.payload.getClaim(USER_ID).asInt() ?: return@validate null,
-                    password = jwtCredential.payload.getClaim(PASSWORD).asString() ?: return@validate null
-                ) == Result.OK
-                if (isTokenValid) JWTPrincipal(jwtCredential.payload)
-                else null
+                if (isTokenExpired) {
+                    return@validate null
+                }
+                val isTokenNotValid = service.usersService.isTokenValid(
+                    userID = jwtCredential.payload.getClaim(USER_ID).asInt()
+                        ?: return@validate null,
+                    password = jwtCredential.payload.getClaim(PASSWORD).asString()
+                        ?: return@validate null
+                ) != Result.OK
+                if (isTokenNotValid) return@validate null
+                return@validate JWTPrincipal(jwtCredential.payload)
             }
-            challenge { _, _ -> call.respond(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED.toResultResponse()) }
+            challenge { _, _ ->
+                call.response.status(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED.toHttpStatusCode())
+            }
         }
     }
 }

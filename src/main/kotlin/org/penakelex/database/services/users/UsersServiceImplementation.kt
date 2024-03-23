@@ -80,6 +80,16 @@ class UsersServiceImplementation(
         return@databaseQuery Result.OK to userEmail
     }
 
+    override suspend fun getUserAvatar(id: Int): Pair<Result, String?> = databaseQuery {
+        val userAvatar = Users.select { Users.id.eq(id) }.singleOrNull()?.let {
+            it[Users.avatar]
+        } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        if (userAvatar == basicAvatar) {
+            return@databaseQuery Result.AVATAR_IS_BASIC to null
+        }
+        return@databaseQuery Result.OK to userAvatar
+    }
+
     override suspend fun updateUserData(
         userID: Int,
         userData: UserUpdate,

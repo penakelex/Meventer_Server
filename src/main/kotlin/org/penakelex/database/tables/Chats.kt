@@ -11,5 +11,5 @@ object Chats : LongIdTable("chats") {
         .nullable()
     val administrators = array<Int>("administrators", IntegerColumnType())
         .nullable()
-    val open = bool("open").nullable()
+    val open = bool("open").default(false)
 }

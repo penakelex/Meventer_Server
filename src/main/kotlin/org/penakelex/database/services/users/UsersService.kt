@@ -22,6 +22,7 @@ interface UsersService {
     suspend fun getUserData(id: Int): Pair<Result, User?>
     suspend fun getUsersByNickname(nickname: String): Pair<Result, List<UserShort>>
     suspend fun getUserEmail(id: Int): Pair<Result, String?>
+    suspend fun getUserAvatar(id: Int): Pair<Result, String?>
     suspend fun updateUserData(userID: Int, userData: UserUpdate, avatar: String?): Result
     suspend fun updateEmail(userID: Int, email: UserEmail): Result
     suspend fun updatePassword(userID: Int, password: String): Result

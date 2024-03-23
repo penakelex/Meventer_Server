@@ -29,6 +29,7 @@ class ChatsServiceImplementation : TableService(), ChatsService {
             it[originator] = originatorID
             it[administrators] = chat.administrators.sorted().toTypedArray()
             it[participants] = chat.administrators.plus(originatorID).sorted().toTypedArray()
+            it[Chats.open] = open
         }.value
     }
 
@@ -121,7 +122,7 @@ class ChatsServiceImplementation : TableService(), ChatsService {
                 participants = it[Chats.participants],
                 administrators = it[Chats.administrators]!!,
                 originator = it[Chats.originator]!!,
-                isOpen = it[Chats.open]!!
+                isOpen = it[Chats.open]
             )
         } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
         if (!isOpen && changerID != null && !administrators.binaryContains(changerID) && originator != changerID) {

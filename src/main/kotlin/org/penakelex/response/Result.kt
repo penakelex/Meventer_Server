@@ -8,158 +8,162 @@ import io.ktor.http.*
  * @property message result message
  * */
 enum class Result(
-    val code: UShort,
+    val code: Int,
     val message: String
 ) {
     OK(
-        HttpStatusCode.OK.value.toUShort(), "OK"
+        HttpStatusCode.OK.value, "OK"
     ),
     USER_WITH_SUCH_EMAIL_ALREADY_EXISTS(
-        HttpStatusCode.Conflict.value.toUShort(),
+        HttpStatusCode.Conflict.value,
         "User with such email already exists"
     ),
     NO_USER_WITH_SUCH_ID(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "User with such ID not found"
     ),
     USER_PASSWORD_DOES_NOT_MATCH(
-        HttpStatusCode.Conflict.value.toUShort(),
+        HttpStatusCode.Conflict.value,
         "User password doesn`t match"
     ),
     TOKEN_IS_NOT_VALID_OR_EXPIRED(
-        HttpStatusCode.Conflict.value.toUShort(),
+        HttpStatusCode.Conflict.value,
         "Token is not valid or expired"
     ),
     NO_USER_WITH_SUCH_EMAIL(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "User with such email not found"
     ),
     VERIFICATION_CODE_IS_INCORRECT(
-        HttpStatusCode.Conflict.value.toUShort(),
+        HttpStatusCode.Conflict.value,
         "Verification code is incorrect"
     ),
     SENDING_VERIFICATION_CODE_STARTED(
-        HttpStatusCode.OK.value.toUShort(),
+        HttpStatusCode.OK.value,
         "Verification code sending started"
     ),
     EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value.toUShort(),
+        HttpStatusCode.NoContent.value,
         "Events for user with such ID not found"
     ),
     EMPTY_FORM_ITEM_OF_MULTI_PART_DATA(
-        HttpStatusCode.ExpectationFailed.value.toUShort(),
+        HttpStatusCode.ExpectationFailed.value,
         "Empty form item of multi part data"
     ),
     FEATURED_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value.toUShort(),
+        HttpStatusCode.NoContent.value,
         "Featured events for user with such ID not found"
     ),
     ORGANIZER_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value.toUShort(),
+        HttpStatusCode.NoContent.value,
         "Events where user with such ID is organizer not found"
     ),
     PARTICIPANT_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value.toUShort(),
+        HttpStatusCode.NoContent.value,
         "Events where user with such ID is participant not found"
     ),
     UNRESOLVED_EVENT_TYPE(
-        HttpStatusCode.Conflict.value.toUShort(),
+        HttpStatusCode.Conflict.value,
         "Unresolved event type"
     ),
     EVENT_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "Event with such ID not found"
     ),
     YOU_CAN_NOT_MANAGE_THIS_EVENT(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "You can`t manage this event"
     ),
     YOU_CAN_NOT_FEEDBACK_YOURSELF(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "You can`t feedback yourself"
     ),
     FEEDBACKS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "Feedbacks for user with such ID not found"
     ),
     YOUR_AGE_DOES_NOT_MATCH_THE_REQUIRED_BY_THE_EVENT_ORGANIZERS(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "Your age doesn`t match the required by the event organizers"
     ),
     USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "User can`t have more than one avatar"
     ),
     EMPTY_FILENAME(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "Empty filename"
     ),
     EMPTY_EVENT_ID(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "Empty event ID"
     ),
     FEEDBACK_FROM_SAME_USER_AND_TO_SAME_USER(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "Feedback from user with such ID to user with such ID already exists"
     ),
     AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "As originator you can`t be someone else"
     ),
     YOU_ARE_ALREADY_ORGANIZER_OF_THIS_EVENT(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "You are already organizer of this event"
     ),
     USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS(
-        HttpStatusCode.Found.value.toUShort(),
+        HttpStatusCode.Found.value,
         "User with such nickname already exists"
     ),
     YOU_ALREADY_HAVE_CHAT_WITH_THIS_USER(
-        HttpStatusCode.Found.value.toUShort(),
+        HttpStatusCode.Found.value,
         "You already have chat with this user"
     ),
     CHAT_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "Chat with such ID not found"
     ),
     YOU_CAN_NOT_MANAGE_THIS_CHAT(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "You can`t manage this chat"
     ),
     YOU_CAN_NOT_DELETE_ADMINISTRATOR_FROM_CHAT_AS_ADMINISTRATOR(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "You can`t delete administrator from chat as administrator"
     ),
     ADMINISTRATOR_MUST_BE_PARTICIPANT_OF_THE_CHAT(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "Administrator must be participant of the chat"
     ),
     YOU_CAN_NOT_SEND_MESSAGES_IN_THIS_CHAT(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "You can`t send messages in this chat"
     ),
     MESSAGE_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT(
-        HttpStatusCode.NotAcceptable.value.toUShort(),
+        HttpStatusCode.NotAcceptable.value,
         "Message with such ID not found or you can`t change it"
     ),
     USER_WITH_SUCH_ID_IS_ALREADY_CHAT_CLIENT(
-        HttpStatusCode.Conflict.value.toUShort(),
+        HttpStatusCode.Conflict.value,
         "User with such ID is already chat client"
     ),
     CAN_NOT_CREATE_FILE_FROM_GIVEN_BYTES(
-        HttpStatusCode.Conflict.value.toUShort(),
+        HttpStatusCode.Conflict.value,
         "Can`t create file from given bytes"
     ),
     FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT(
-        HttpStatusCode.NotFound.value.toUShort(),
+        HttpStatusCode.NotFound.value,
         "Feedback with such ID not found or you can`t change it"
     ),
     YOU_ARE_NOT_PARTICIPANT_OF_THIS_CHAT(
-        HttpStatusCode.Forbidden.value.toUShort(),
+        HttpStatusCode.Forbidden.value,
         "You aren`t participant of this chat"
     ),
     NOTHING_TO_CHANGE(
-        HttpStatusCode.NotAcceptable.value.toUShort(),
+        HttpStatusCode.NotAcceptable.value,
         "Nothing to change"
+    ),
+    AVATAR_IS_BASIC(
+        HttpStatusCode.NotModified.value,
+        "Avatar is basic"
     )
 }

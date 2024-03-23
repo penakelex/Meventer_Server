@@ -1,5 +1,6 @@
 package org.penakelex.plugins
 
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -13,12 +14,17 @@ import org.penakelex.routes.user.userRoutes
 fun Application.configureRouting() {
     val controller by inject<Controller>()
     routing {
-        get("") {
-            call.respond("Hello, There!")
-        }
+        greetingRoute()
         userRoutes(controller.usersController)
         eventRoutes(controller.eventsController)
         fileRoutes(controller.filesController)
         chatRoutes(controller.chatsController)
+    }
+}
+
+fun Route.greetingRoute() {
+    get {
+        call.response.status(HttpStatusCode.OK)
+        call.respond("Hello, There! - Meventer")
     }
 }

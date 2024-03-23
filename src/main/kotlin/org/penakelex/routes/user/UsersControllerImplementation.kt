@@ -1,9 +1,11 @@
 package org.penakelex.routes.user
 
+import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.ktor.util.reflect.*
 import jakarta.mail.*
 import jakarta.mail.Message
 import jakarta.mail.internet.InternetAddress
@@ -13,8 +15,7 @@ import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
 import org.penakelex.fileSystem.FileManager
 import org.penakelex.response.Result
-import org.penakelex.response.toResponse
-import org.penakelex.response.toResultResponse
+import org.penakelex.response.toHttpStatusCode
 import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
 import org.penakelex.session.JWTValues
 import org.penakelex.session.USER_ID
@@ -33,7 +34,7 @@ class UsersControllerImplementation(
 ) : UsersController {
     override suspend fun sendEmailCode(call: ApplicationCall) {
         val userEmail = call.receive<UserEmail>()
-        call.respond(Result.SENDING_VERIFICATION_CODE_STARTED.toResultResponse())
+        call.response.status(Result.SENDING_VERIFICATION_CODE_STARTED.toHttpStatusCode())
         val code = buildString {
             val range = 0..9
             repeat(6) { append(range.random()) }
@@ -52,44 +53,42 @@ class UsersControllerImplementation(
         service.usersEmailCodesService.insertCode(email = userEmail, code = code)
     }
 
-    override suspend fun verifyEmailCode(call: ApplicationCall) = call.respond(
+    override suspend fun verifyEmailCode(call: ApplicationCall) = call.response.status(
         service.usersEmailCodesService.verifyCode(
             emailCode = call.receive<UserEmailCode>()
-        ).toResultResponse()
+        ).toHttpStatusCode()
     )
 
-    override suspend fun verifyToken(call: ApplicationCall) = call.respond(
-        Result.OK.toResultResponse()
+    override suspend fun verifyToken(call: ApplicationCall) = call.response.status(
+        HttpStatusCode.OK
     )
 
     override suspend fun registerUser(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
         val user: UserRegister = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.let {
             Json.decodeFromString(it.value)
-        } ?: return call.respond(
-            Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResponse()
+        } ?: return call.response.status(
+            Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toHttpStatusCode()
         )
         val images = fileManager.uploadFiles(
             fileItems = multiPartData.filterIsInstance<PartData.FileItem>()
         )
-        if (images.size > 1) return call.respond(
-            Result.USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR.toResponse()
+        if (images.size > 1) return call.response.status(
+            Result.USER_CAN_NOT_HAVE_MORE_THAN_ONE_AVATAR.toHttpStatusCode()
         )
         val codeVerificationResult = service.usersEmailCodesService.verifyAndDeleteCode(
             email = user.email, code = user.code
         )
-        if (codeVerificationResult != Result.OK) return call.respond(
-            codeVerificationResult.toResponse()
+        if (codeVerificationResult != Result.OK) return call.response.status(
+            codeVerificationResult.toHttpStatusCode()
         )
         val (insertionResult, userID) = service.usersService.insertNewUser(
             user = user, avatar = images.singleOrNull()
         )
-        if (userID == null) return call.respond(insertionResult.toResponse())
+        if (userID == null) return call.response.status(insertionResult.toHttpStatusCode())
         call.respond(
-            Pair(
-                first = insertionResult,
-                second = generateToken(valuesJWT, userID, user.password)
-            ).toResponse()
+            insertionResult.toHttpStatusCode(),
+            generateToken(valuesJWT, userID, user.password)
         )
     }
 
@@ -97,46 +96,61 @@ class UsersControllerImplementation(
     override suspend fun loginUser(call: ApplicationCall) {
         val user = call.receive<UserLogin>()
         val (checkResult, userID) = service.usersService.isEmailAndPasswordCorrect(user)
-        if (userID == null) return call.respond(checkResult.toResponse())
+        if (userID == null) return call.response.status(checkResult.toHttpStatusCode())
         call.respond(
-            Pair(
-                first = checkResult,
-                second = generateToken(valuesJWT, userID, user.password)
-            ).toResponse()
+            checkResult.toHttpStatusCode(),
+            generateToken(valuesJWT, userID, user.password)
         )
     }
 
-    override suspend fun getUserData(call: ApplicationCall) = call.respond(
-        service.usersService.getUserData(
-            id = call.receive<NullableUserID>().id
+    override suspend fun getUserData(call: ApplicationCall) {
+        val (result, data) = service.usersService.getUserData(
+            id = call.receiveNullable<Int>()
                 ?: call.getIntJWTPrincipalClaim(USER_ID)
-        ).toResponse()
-    )
+        )
+        call.respond(
+            result.toHttpStatusCode(),
+            data,
+            typeInfo<User>()
+        )
+    }
 
-    override suspend fun getUsersByNickname(call: ApplicationCall) = call.respond(
-        service.usersService.getUsersByNickname(
+    override suspend fun getUsersByNickname(call: ApplicationCall) {
+        val (result, users) = service.usersService.getUsersByNickname(
             nickname = call.receive<String>()
-        ).toResponse()
-    )
+        )
+        call.respond(
+            result.toHttpStatusCode(),
+            users
+        )
+    }
 
     override suspend fun updateUserData(call: ApplicationCall) {
         val multiPartData = call.receiveMultipart().readAllParts()
         val userData: UserUpdate = Json.decodeFromString(
             string = multiPartData.filterIsInstance<PartData.FormItem>().singleOrNull()?.value
-                ?: return call.respond(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toResultResponse())
+                ?: return call.response.status(Result.EMPTY_FORM_ITEM_OF_MULTI_PART_DATA.toHttpStatusCode())
         )
-        val avatar = fileManager.uploadFiles(
+        val newAvatar = fileManager.uploadFiles(
             fileItems = multiPartData.filterIsInstance<PartData.FileItem>()
         ).singleOrNull()
-        if (avatar == null && userData.nickname == null && userData.name == null) {
-            return call.respond(Result.NOTHING_TO_CHANGE.toResultResponse())
+        val userID = call.getIntJWTPrincipalClaim(USER_ID)
+        if (newAvatar != null) {
+            val (gettingAvatarResult, lastAvatar) = service.usersService.getUserAvatar(id = userID)
+            if (gettingAvatarResult == Result.NO_USER_WITH_SUCH_ID) {
+                return call.response.status(gettingAvatarResult.toHttpStatusCode())
+            }
+            fileManager.deleteFiles(listOf(lastAvatar!!))
         }
-        call.respond(
+        if (newAvatar == null && userData.nickname == null && userData.name == null) {
+            return call.response.status(Result.NOTHING_TO_CHANGE.toHttpStatusCode())
+        }
+        call.response.status(
             service.usersService.updateUserData(
-                userID = call.getIntJWTPrincipalClaim(USER_ID),
+                userID = userID,
                 userData = userData,
-                avatar = avatar
-            ).toResultResponse()
+                avatar = newAvatar
+            ).toHttpStatusCode()
         )
     }
 
@@ -147,13 +161,13 @@ class UsersControllerImplementation(
             code = emailCode
         )
         if (verificationResult != Result.OK) {
-            return call.respond(verificationResult.toResultResponse())
+            return call.respond(verificationResult.toHttpStatusCode())
         }
         call.respond(
             service.usersService.updateEmail(
                 userID = call.getIntJWTPrincipalClaim(USER_ID),
                 email = email
-            ).toResultResponse()
+            ).toHttpStatusCode()
         )
     }
 
@@ -162,48 +176,53 @@ class UsersControllerImplementation(
         val userID = call.getIntJWTPrincipalClaim(USER_ID)
         val (gettingUserEmailResult, email) = service.usersService.getUserEmail(id = userID)
         if (gettingUserEmailResult != Result.OK) {
-            return call.respond(gettingUserEmailResult.toResultResponse())
+            return call.response.status(gettingUserEmailResult.toHttpStatusCode())
         }
         val verificationResult = service.usersEmailCodesService.verifyAndDeleteCode(
             email = email!!,
             code = emailCode
         )
         if (verificationResult != Result.OK) {
-            return call.respond(verificationResult.toResultResponse())
+            return call.response.status(verificationResult.toHttpStatusCode())
         }
-        call.respond(
+        call.response.status(
             service.usersService.updatePassword(
                 userID = userID,
                 password = password
-            ).toResultResponse()
+            ).toHttpStatusCode()
         )
     }
 
-    override suspend fun createFeedback(call: ApplicationCall) = call.respond(
+    override suspend fun createFeedback(call: ApplicationCall) = call.response.status(
         service.usersFeedbackService.insertFeedback(
             fromUserID = call.getIntJWTPrincipalClaim(USER_ID),
             feedback = call.receive<UserFeedbackCreate>()
-        ).toResultResponse()
+        ).toHttpStatusCode()
     )
 
-    override suspend fun getFeedbackToUser(call: ApplicationCall) = call.respond(
-        service.usersFeedbackService.getAllFeedbackToUser(
-            id = call.receive<NullableUserID>().id
+    override suspend fun getFeedbackToUser(call: ApplicationCall) {
+        val (result, feedback) = service.usersFeedbackService.getAllFeedbackToUser(
+            id = call.receiveNullable<Int>()
                 ?: call.getIntJWTPrincipalClaim(USER_ID)
-        ).toResponse()
-    )
+        )
+        call.respond(
+            result.toHttpStatusCode(),
+            feedback,
+            typeInfo<List<UserFeedback>>()
+        )
+    }
 
-    override suspend fun updateFeedback(call: ApplicationCall) = call.respond(
+    override suspend fun updateFeedback(call: ApplicationCall) = call.response.status(
         service.usersFeedbackService.updateFeedback(
             userID = call.getIntJWTPrincipalClaim(USER_ID),
             feedback = call.receive<UserFeedbackUpdate>()
-        ).toResultResponse()
+        ).toHttpStatusCode()
     )
 
-    override suspend fun deleteFeedback(call: ApplicationCall) = call.respond(
+    override suspend fun deleteFeedback(call: ApplicationCall) = call.response.status(
         service.usersFeedbackService.deleteFeedback(
             userID = call.getIntJWTPrincipalClaim(USER_ID),
             feedbackID = call.receive<Long>()
-        ).toResultResponse()
+        ).toHttpStatusCode()
     )
 }

@@ -3,14 +3,14 @@ package org.penakelex.routes.chat
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.ktor.util.reflect.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.json.Json
 import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
 import org.penakelex.response.Result
-import org.penakelex.response.toResponse
-import org.penakelex.response.toResultResponse
+import org.penakelex.response.toHttpStatusCode
 import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
 import org.penakelex.session.USER_ID
 import java.util.concurrent.ConcurrentHashMap
@@ -28,7 +28,7 @@ class ChatsControllerImplementation(
                 webSocketSession = webSocketSession
             )
             if (onJoinResult != Result.OK) {
-                call.respond(onJoinResult.toResultResponse())
+                return call.response.status(onJoinResult.toHttpStatusCode())
             }
             webSocketSession.incoming.consumeEach { frame ->
                 if (frame is Frame.Text) selectMessage(
@@ -182,27 +182,30 @@ class ChatsControllerImplementation(
             chat = call.receive<ChatCreate>(),
             originatorID = call.getIntJWTPrincipalClaim(USER_ID),
             open = false
-        ).first.toResultResponse()
+        ).first.toHttpStatusCode()
     )
 
-    override suspend fun createDialog(call: ApplicationCall) = call.respond(
-        service.chatsService.createDialog(
+    override suspend fun createDialog(call: ApplicationCall) {
+        val (result, chatID) = service.chatsService.createDialog(
             firstUserID = call.getIntJWTPrincipalClaim(USER_ID),
             secondUserID = call.receive<Int>()
-        ).toResponse()
-    )
+        )
+        call.respond(result.toHttpStatusCode(), chatID, typeInfo<Long>())
+    }
 
-    override suspend fun getChatParticipants(call: ApplicationCall) = call.respond(
-        service.chatsService.getChatParticipants(
+    override suspend fun getChatParticipants(call: ApplicationCall) {
+        val (result, participants) = service.chatsService.getChatParticipants(
             chatID = call.receive<Long>()
-        ).toResponse()
-    )
+        )
+        call.respond(result.toHttpStatusCode(), participants, typeInfo<List<Int>>())
+    }
 
-    override suspend fun getAllChats(call: ApplicationCall) = call.respond(
-        service.chatsService.getAllChats(
+    override suspend fun getAllChats(call: ApplicationCall) {
+        val (result, chats) = service.chatsService.getAllChats(
             userID = call.getIntJWTPrincipalClaim(USER_ID)
-        ).toResponse()
-    )
+        )
+        call.respond(result.toHttpStatusCode(), chats, typeInfo<List<Chat>>())
+    }
 
     override suspend fun getAllMessages(call: ApplicationCall) {
         val chatID = call.receive<Long>()
@@ -211,15 +214,18 @@ class ChatsControllerImplementation(
             chatID = chatID
         )
         if (gettingChatParticipantsResult != Result.OK) {
-            return call.respond(gettingChatParticipantsResult.toResponse())
+            return call.response.status(gettingChatParticipantsResult.toHttpStatusCode())
         }
         if (userID !in participants!!) {
-            return call.respond(Result.YOU_ARE_NOT_PARTICIPANT_OF_THIS_CHAT.toResponse())
+            return call.response.status(Result.YOU_ARE_NOT_PARTICIPANT_OF_THIS_CHAT.toHttpStatusCode())
         }
+        val (gettingAllMessagesResult, messages) = service.messagesService.getAllMessages(
+            chatID = chatID
+        )
         call.respond(
-            service.messagesService.getAllMessages(
-                chatID = chatID
-            ).toResponse()
+            gettingAllMessagesResult.toHttpStatusCode(),
+            messages,
+            typeInfo<List<Message>>()
         )
     }
 
@@ -234,27 +240,27 @@ class ChatsControllerImplementation(
             userID = changingID,
             changerID = userID
         )
-        call.respond(changingResult.toResultResponse())
+        call.response.status(changingResult.toHttpStatusCode())
     }
 
-    override suspend fun changeParticipantAsAdministrator(call: ApplicationCall) = call.respond(
+    override suspend fun changeParticipantAsAdministrator(call: ApplicationCall) = call.response.status(
         service.chatsService.changeParticipantAsAdministrator(
             updaterID = call.getIntJWTPrincipalClaim(USER_ID),
             chatAdministrator = call.receive<ChatAdministratorUpdate>()
-        ).toResultResponse()
+        ).toHttpStatusCode()
     )
 
-    override suspend fun updateChatName(call: ApplicationCall) = call.respond(
+    override suspend fun updateChatName(call: ApplicationCall) = call.response.status(
         service.chatsService.updateChatName(
             chat = call.receive<ChatNameUpdate>(),
             userID = call.getIntJWTPrincipalClaim(USER_ID)
-        ).toResultResponse()
+        ).toHttpStatusCode()
     )
 
-    override suspend fun deleteChat(call: ApplicationCall) = call.respond(
+    override suspend fun deleteChat(call: ApplicationCall) = call.response.status(
         service.chatsService.deleteChat(
             chatID = call.receive<Long>(),
             userID = call.getIntJWTPrincipalClaim(USER_ID)
-        ).toResultResponse()
+        ).toHttpStatusCode()
     )
 }

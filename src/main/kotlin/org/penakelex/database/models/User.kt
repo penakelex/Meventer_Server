@@ -52,19 +52,10 @@ data class User(
     val dateOfBirth: LocalDate
 )
 
-/**
- * Data transfer object for nullable user ID
- * @property id nullable user ID
- * */
-@Serializable
-data class NullableUserID(
-    val id: Int?
-)
-
 @Serializable
 data class UserUpdate(
     val nickname: String?,
-    val name: String?,
+    val name: String?
 )
 
 @Serializable
