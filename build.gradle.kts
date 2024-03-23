@@ -1,4 +1,3 @@
-
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
@@ -12,12 +11,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
 }
 
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = "ApplicationKt"
+    }
+}
+
 group = "org.penakelex"
 version = "0.0.1"
 
 application {
     mainClass.set("io.ktor.server.netty.EngineMain")
-
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
