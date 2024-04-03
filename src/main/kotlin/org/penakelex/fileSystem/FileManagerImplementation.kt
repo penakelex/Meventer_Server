@@ -19,7 +19,7 @@ class FileManagerImplementation(private val directory: String) : FileManager {
 
     override suspend fun uploadFiles(fileItems: List<PartData.FileItem>): List<String> = coroutineScope {
         val fileNames = List(fileItems.size) { File_Name_Pattern.format(newFileNumber.getAndIncrement()) }
-        fileItems.mapIndexed { index, fileItem ->
+        return@coroutineScope fileItems.mapIndexed { index, fileItem ->
             async(Dispatchers.IO) {
                 val fileExtension = fileItem.originalFileName?.substringAfterLast('.')
                 val filePath = "$directory\\${fileNames[index]}.${fileExtension}"

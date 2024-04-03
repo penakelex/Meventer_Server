@@ -53,7 +53,7 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
             it[rating] = feedback.rating
             it[comment] = feedback.comment
         }
-        if (updatedFeedbacksCount == 1) {
+        if (updatedFeedbacksCount != 1) {
             return@databaseQuery Result.FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT
         }
         return@databaseQuery Result.OK

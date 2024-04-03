@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.penakelex.database.services.chats.ChatsService
 import org.penakelex.database.services.events.EventsService
 import org.penakelex.database.services.messages.MessagesService
+import org.penakelex.database.services.sessions.SessionsService
 import org.penakelex.database.services.users.UsersService
 import org.penakelex.database.services.usersEmailCodes.UsersEmailCodesService
 import org.penakelex.database.services.usersFeedback.UsersFeedbackService
@@ -26,6 +27,7 @@ class Service(
     val usersFeedbackService: UsersFeedbackService,
     val chatsService: ChatsService,
     val messagesService: MessagesService,
+    val sessionsService: SessionsService,
     database: Database
 ) {
     init {

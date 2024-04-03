@@ -1,8 +1,8 @@
 package org.penakelex.database.services.chats
 
 import org.penakelex.database.models.Chat
-import org.penakelex.database.models.ChatCreate
 import org.penakelex.database.models.ChatAdministratorUpdate
+import org.penakelex.database.models.ChatCreate
 import org.penakelex.database.models.ChatNameUpdate
 import org.penakelex.response.Result
 

@@ -2,20 +2,22 @@ package org.penakelex.database.services.messages
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.penakelex.database.extenstions.eqAny
 import org.penakelex.database.models.Message
 import org.penakelex.database.models.MessageSend
 import org.penakelex.database.models.MessageUpdate
 import org.penakelex.database.services.TableService
-import org.penakelex.database.tables.Chats
+import org.penakelex.database.tables.ChatsParticipants
 import org.penakelex.database.tables.Messages
 import org.penakelex.database.tables.MessagesAttachments
 import org.penakelex.response.Result
 
 class MessagesServiceImplementation : TableService(), MessagesService {
-    override suspend fun insertNewMessage(senderID: Int, message: MessageSend): Pair<Result, Long?> = databaseQuery {
-        val isUserNotAParticipantOfTheChat = Chats.select {
-            Chats.id.eq(message.chatID) and Chats.participants.eqAny(senderID)
+    override suspend fun insertNewMessage(
+        senderID: Int,
+        message: MessageSend
+    ): Pair<Result, Long?> = databaseQuery {
+        val isUserNotAParticipantOfTheChat = ChatsParticipants.select {
+            ChatsParticipants.chat_id.eq(message.chatID) and ChatsParticipants.participant_id.eq(senderID)
         }.singleOrNull() == null
         if (isUserNotAParticipantOfTheChat) {
             return@databaseQuery Result.YOU_CAN_NOT_SEND_MESSAGES_IN_THIS_CHAT to null
@@ -70,13 +72,18 @@ class MessagesServiceImplementation : TableService(), MessagesService {
         return@databaseQuery Result.OK
     }
 
-    override suspend fun deleteMessage(messageID: Long, deleterID: Int): Result = databaseQuery {
+    override suspend fun deleteMessage(messageID: Long, deleterID: Int): Pair<Result, String?> = databaseQuery {
         val deletedMessagesCount = Messages.deleteWhere {
             Messages.id.eq(messageID) and sender_id.eq(deleterID)
         }
         if (deletedMessagesCount != 1) {
-            return@databaseQuery Result.MESSAGE_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT
+            return@databaseQuery Result.MESSAGE_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT to null
         }
-        return@databaseQuery Result.OK
+        val attachment = MessagesAttachments.select {
+            MessagesAttachments.message_id.eq(messageID)
+        }.singleOrNull()?.let {
+            it[MessagesAttachments.attachment]
+        }
+        return@databaseQuery Result.OK to attachment
     }
 }

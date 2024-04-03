@@ -51,26 +51,28 @@ private fun getRandomString(): String {
  * @receiver [String] ciphered string
  * @return original string value
  * */
-fun String.unCipher(): String {
+fun String.decipher(): String {
     if (isEmpty()) return ""
-    val symbolsIndices = buildMap { for ((index, symbol) in Alphabet.withIndex()) set(symbol, index) }
+    val symbolsIndices = buildMap {
+        for ((index, symbol) in Alphabet.withIndex()) set(symbol, index)
+    }
     return buildString {
-        for (code in this@unCipher.split(Spliterator)) {
-            append(code.unCode(symbolsIndices))
-        }
+        for (code in this@decipher.split(Spliterator)) append(
+            code.decode(symbolsIndices)
+        )
     }
 }
 
 /**
- * Uncodes string to character
+ * Decode string to character
  * @receiver ciphered character
  * @return original character
  * */
-private fun String.unCode(symbolsIndices: Map<Char, Int>): Char {
+private fun String.decode(symbolsIndices: Map<Char, Int>): Char {
     var power = 0
     var code = 0
-    for (character in iterator()) {
-        code = code.plus(symbolsIndices[character]!!.times(Base.toDouble().pow(power++).toInt()))
-    }
+    for (character in iterator()) code = code.plus(
+        symbolsIndices[character]!!.times(Base.toDouble().pow(power++).toInt())
+    )
     return code.div(Seed).toChar()
 }

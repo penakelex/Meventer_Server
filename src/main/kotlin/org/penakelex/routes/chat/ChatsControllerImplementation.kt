@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.json.Json
 import org.penakelex.database.models.*
 import org.penakelex.database.services.Service
+import org.penakelex.fileSystem.FileManager
 import org.penakelex.response.Result
 import org.penakelex.response.toHttpStatusCode
 import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
@@ -17,7 +18,8 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.set
 
 class ChatsControllerImplementation(
-    private val service: Service
+    private val service: Service,
+    private val fileManager: FileManager
 ) : ChatsController {
     private val clients = ConcurrentHashMap<Int, Client>()
     override suspend fun chatSocket(call: ApplicationCall, webSocketSession: WebSocketSession) {
@@ -154,11 +156,12 @@ class ChatsControllerImplementation(
             chatID = deletedMessage.chatID
         )
         if (gettingChatParticipantsResult != Result.OK) return
-        val messageDeleteResult = service.messagesService.deleteMessage(
+        val (messageDeleteResult, attachment) = service.messagesService.deleteMessage(
             messageID = deletedMessage.id,
             deleterID = deleterID
         )
         if (messageDeleteResult != Result.OK) return
+        fileManager.deleteFiles(listOf(attachment!!))
         sendToClients(
             chatParticipants = chatParticipants!!.toSet(),
             message = deletedMessage.id.toString()
@@ -177,34 +180,51 @@ class ChatsControllerImplementation(
         }
     }
 
-    override suspend fun createClosedChat(call: ApplicationCall) = call.respond(
-        service.chatsService.createChat(
+    override suspend fun createClosedChat(call: ApplicationCall) {
+        val (result, id) = service.chatsService.createChat(
             chat = call.receive<ChatCreate>(),
             originatorID = call.getIntJWTPrincipalClaim(USER_ID),
             open = false
-        ).first.toHttpStatusCode()
-    )
+        )
+        call.respond(
+            result.toHttpStatusCode(),
+            id,
+            typeInfo<Long>()
+        )
+    }
 
     override suspend fun createDialog(call: ApplicationCall) {
         val (result, chatID) = service.chatsService.createDialog(
             firstUserID = call.getIntJWTPrincipalClaim(USER_ID),
             secondUserID = call.receive<Int>()
         )
-        call.respond(result.toHttpStatusCode(), chatID, typeInfo<Long>())
+        call.respond(
+            result.toHttpStatusCode(),
+            chatID,
+            typeInfo<Long>()
+        )
     }
 
     override suspend fun getChatParticipants(call: ApplicationCall) {
         val (result, participants) = service.chatsService.getChatParticipants(
             chatID = call.receive<Long>()
         )
-        call.respond(result.toHttpStatusCode(), participants, typeInfo<List<Int>>())
+        call.respond(
+            result.toHttpStatusCode(),
+            participants,
+            typeInfo<List<Int>>()
+        )
     }
 
     override suspend fun getAllChats(call: ApplicationCall) {
         val (result, chats) = service.chatsService.getAllChats(
             userID = call.getIntJWTPrincipalClaim(USER_ID)
         )
-        call.respond(result.toHttpStatusCode(), chats, typeInfo<List<Chat>>())
+        call.respond(
+            result.toHttpStatusCode(),
+            chats,
+            typeInfo<List<Chat>>()
+        )
     }
 
     override suspend fun getAllMessages(call: ApplicationCall) {

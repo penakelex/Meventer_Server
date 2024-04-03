@@ -1,18 +1,24 @@
 package org.penakelex.database.services.chats
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.penakelex.database.extenstions.binaryContains
-import org.penakelex.database.extenstions.eqAny
 import org.penakelex.database.models.*
 import org.penakelex.database.services.TableService
-import org.penakelex.database.tables.Chats
-import org.penakelex.database.tables.Messages
-import org.penakelex.database.tables.MessagesAttachments
-import org.penakelex.database.tables.Users
+import org.penakelex.database.tables.*
 import org.penakelex.response.Result
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.max
 
 class ChatsServiceImplementation : TableService(), ChatsService {
+    private lateinit var newID: AtomicLong
+
+    init {
+        setID()
+    }
+
     override suspend fun createChat(
         originatorID: Int,
         chat: ChatCreate,
@@ -24,18 +30,30 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         if (existingAdministratorsIDsCount != chat.administrators.size) {
             return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         }
-        return@databaseQuery Result.OK to Chats.insertAndGetId {
+        val id = newID.getAndIncrement()
+        Chats.insert {
+            it[Chats.id] = id
             it[name] = chat.name
             it[originator] = originatorID
-            it[administrators] = chat.administrators.sorted().toTypedArray()
-            it[participants] = chat.administrators.plus(originatorID).sorted().toTypedArray()
             it[Chats.open] = open
-        }.value
+        }
+        if (chat.administrators.isNotEmpty()) {
+            ChatsAdministrators.batchInsert(chat.administrators) { administratorID ->
+                this[ChatsAdministrators.chat_id] = id
+                this[ChatsAdministrators.administrator_id] = administratorID
+            }
+            ChatsParticipants.batchInsert(chat.administrators) { participantID ->
+                this[ChatsParticipants.chat_id] = id
+                this[ChatsParticipants.participant_id] = participantID
+            }
+        }
+        return@databaseQuery Result.OK to id
     }
 
     override suspend fun createDialog(firstUserID: Int, secondUserID: Int): Pair<Result, Long?> = databaseQuery {
-        val isDialogExists = Chats.select {
-            Chats.participants.eq(arrayOf(firstUserID, secondUserID))
+        val isDialogExists = Dialogs.select {
+            (Dialogs.first.eq(firstUserID) and Dialogs.second.eq(secondUserID)) or
+                    (Dialogs.first.eq(secondUserID) and Dialogs.second.eq(firstUserID))
         }.singleOrNull() != null
         if (isDialogExists) {
             return@databaseQuery Result.YOU_ALREADY_HAVE_CHAT_WITH_THIS_USER to null
@@ -46,30 +64,42 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         if (existingUsersIDsCount != 2) {
             return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         }
-        return@databaseQuery Result.OK to Chats.insertAndGetId {
-            it[participants] = arrayOf(firstUserID, secondUserID).sortedArray()
-        }.value
+        val id = newID.getAndIncrement()
+        Dialogs.insert {
+            it[Dialogs.id] = id
+            it[first] = firstUserID
+            it[second] = secondUserID
+        }
+        return@databaseQuery Result.OK to id
     }
 
     override suspend fun getChatParticipants(chatID: Long): Pair<Result, List<Int>?> = databaseQuery {
-        val chatParticipants = Chats.select {
+        val isChatExists = Chats.select {
             Chats.id.eq(chatID)
-        }.singleOrNull()?.let {
-            it[Chats.participants]
-        } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND to null
-        return@databaseQuery Result.OK to chatParticipants.asList()
+        }.singleOrNull() != null
+        val dialog = Dialogs.select {
+            Dialogs.id.eq(chatID)
+        }.singleOrNull()
+        if (!isChatExists && dialog == null) return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND to null
+        val participants = if (isChatExists) ChatsParticipants.slice(ChatsParticipants.participant_id).select {
+            ChatsParticipants.chat_id.eq(chatID)
+        }.map { it[ChatsParticipants.participant_id] }
+        else listOf(dialog!![Dialogs.first], dialog[Dialogs.second])
+        return@databaseQuery Result.OK to participants
     }
 
     override suspend fun getAllChats(userID: Int): Pair<Result, List<Chat>?> = databaseQuery {
-        val isNotUserExists = Users.select(Users.id.eq(userID)).singleOrNull() == null
-        if (isNotUserExists) {
-            return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
-        }
+        val chatsIDs = ChatsParticipants.slice(ChatsParticipants.chat_id).select {
+            ChatsParticipants.participant_id.eq(userID)
+        }.map { it[ChatsParticipants.chat_id] }
         val chats = Chats.select {
-            Chats.participants.eqAny(userID)
+            Chats.id.inList(chatsIDs)
+        }.toList()
+        val dialogs = Dialogs.select {
+            Dialogs.first.eq(userID) or Dialogs.second.eq(userID)
         }.toList()
         val chatsLastMessages = Messages.select {
-            Messages.chat_id.inList(chats.map { it[Chats.id].value })
+            Messages.chat_id.inList(chatsIDs.plus(dialogs.map { it[Dialogs.id] }))
         }.toList()
         val messagesAttachments = MessagesAttachments.select {
             MessagesAttachments.message_id.inList(chatsLastMessages.map { it[Messages.id].value })
@@ -94,56 +124,56 @@ class ChatsServiceImplementation : TableService(), ChatsService {
                 )
             }
         }
+        val (participants, administrators) = getChatsParticipantsAndAdministrators(chatsIDs)
         return@databaseQuery Result.OK to chats.map {
+            val id = it[Chats.id]
             Chat(
                 name = it[Chats.name],
                 originator = it[Chats.originator],
-                participants = it[Chats.participants].asList(),
-                administrators = it[Chats.administrators]?.asList(),
-                lastMessages = lastMessages[it[Chats.id].value]!!
+                participants = participants[id]!!,
+                administrators = administrators[id]!!,
+                lastMessages = lastMessages[id]!!
             )
         }
     }
 
     override suspend fun changeUserAsParticipant(chatID: Long, userID: Int, changerID: Int?): Result = databaseQuery {
         val isUsersNotExists = Users.select {
-            Users.id.eq(userID).let {
-                if (changerID != null) it or Users.id.eq(changerID)
-                else it
-            }
-        }.count().toInt() != (if (changerID != null) 2 else 1)
+            Users.id.eq(userID)
+        }.singleOrNull() == null
         if (isUsersNotExists) {
             return@databaseQuery Result.NO_USER_WITH_SUCH_ID
         }
-        val (participants, administrators, originator, isOpen) = Chats.select {
+        val originator = Chats.select {
             Chats.id.eq(chatID)
         }.singleOrNull()?.let {
-            ChatSelect(
-                participants = it[Chats.participants],
-                administrators = it[Chats.administrators]!!,
-                originator = it[Chats.originator]!!,
-                isOpen = it[Chats.open]
-            )
+            it[Chats.originator]// to it[Chats.open]
         } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
-        if (!isOpen && changerID != null && !administrators.binaryContains(changerID) && originator != changerID) {
+        val isChangingUserAdministrator = ChatsAdministrators.select {
+            ChatsAdministrators.chat_id.eq(chatID) and ChatsAdministrators.administrator_id.eq(userID)
+        }.singleOrNull() != null
+        val isChangerAdministrator = if (changerID != null) ChatsAdministrators.select {
+            ChatsAdministrators.chat_id.eq(chatID) and ChatsAdministrators.administrator_id.eq(changerID)
+        }.singleOrNull() != null
+        else isChangingUserAdministrator
+        if (changerID != null && !isChangerAdministrator && originator != changerID) {
             return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_CHAT
         }
-        val userIsAdministrator = administrators.binaryContains(userID)
-
-        val isDeletingUser = participants.binaryContains(userID)
-        if (userIsAdministrator && changerID != null && changerID != originator && isDeletingUser) {
+        val isDeletingUser = ChatsParticipants.select {
+            ChatsParticipants.participant_id.eq(userID) and ChatsParticipants.chat_id.eq(chatID)
+        }.singleOrNull() != null
+        if (isChangingUserAdministrator && changerID != null && changerID != originator && isDeletingUser) {
             return@databaseQuery Result.YOU_CAN_NOT_DELETE_ADMINISTRATOR_FROM_CHAT_AS_ADMINISTRATOR
         }
-        Chats.update(
-            where = { Chats.id.eq(chatID) }
-        ) {
-            if (isDeletingUser) {
-                it[Chats.participants] = participants.filter { id -> id != userID }.toTypedArray()
-                if (userIsAdministrator) {
-                    it[Chats.administrators] = administrators.filter { id -> id != userID }.toTypedArray()
-                }
-            } else {
-                it[Chats.participants] = participants.plus(userID)
+        if (isDeletingUser) {
+            ChatsParticipants.deleteWhere { participant_id.eq(userID) and chat_id.eq(chatID) }
+            if (isChangingUserAdministrator) ChatsAdministrators.deleteWhere {
+                administrator_id.eq(userID) and chat_id.eq(chatID)
+            }
+        } else {
+            ChatsParticipants.insert {
+                it[participant_id] = userID
+                it[chat_id] = chatID
             }
         }
         return@databaseQuery Result.OK
@@ -153,30 +183,31 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         updaterID: Int,
         chatAdministrator: ChatAdministratorUpdate
     ): Result = databaseQuery {
-        val (participants, administrators, originator) = Chats.select {
+        val originator = Chats.select {
             Chats.id.eq(chatAdministrator.chatID)
         }.singleOrNull()?.let {
-            Triple(
-                first = it[Chats.participants],
-                second = it[Chats.administrators]!!,
-                third = it[Chats.originator]!!
-            )
+            it[Chats.originator]
         } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
         if (updaterID != originator) {
             return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_CHAT
         }
-        if (!participants.binaryContains(chatAdministrator.updatingID)) {
+        val isUpdatingUserNotParticipantOfChat = ChatsParticipants.select {
+            ChatsParticipants.participant_id.eq(chatAdministrator.updatingID) and
+                    ChatsParticipants.chat_id.eq(chatAdministrator.chatID)
+        }.singleOrNull() == null
+        if (isUpdatingUserNotParticipantOfChat) {
             return@databaseQuery Result.ADMINISTRATOR_MUST_BE_PARTICIPANT_OF_THE_CHAT
         }
-        Chats.update(
-            where = { Chats.id.eq(chatAdministrator.chatID) }
-        ) {
-            it[Chats.administrators] = administrators.run {
-                if (administrators.binaryContains(chatAdministrator.updatingID)) {
-                    filter { id -> id != chatAdministrator.updatingID }.toTypedArray()
-                } else plus(chatAdministrator.updatingID)
-            }
-
+        val isUpdatingUserAlreadyAdministrator = ChatsAdministrators.select {
+            ChatsAdministrators.administrator_id.eq(chatAdministrator.updatingID) and
+                    ChatsAdministrators.chat_id.eq(chatAdministrator.chatID)
+        }.singleOrNull() != null
+        if (isUpdatingUserAlreadyAdministrator) ChatsAdministrators.deleteWhere {
+            administrator_id.eq(chatAdministrator.updatingID) and chat_id.eq(chatAdministrator.chatID)
+        }
+        else ChatsAdministrators.insert {
+            it[administrator_id] = chatAdministrator.updatingID
+            it[chat_id] = chatAdministrator.chatID
         }
         return@databaseQuery Result.OK
     }
@@ -195,11 +226,53 @@ class ChatsServiceImplementation : TableService(), ChatsService {
 
     override suspend fun deleteChat(chatID: Long, userID: Int): Result = databaseQuery {
         val deletedChatsCount = Chats.deleteWhere {
-            Chats.id.eq(chatID) and originator.eq(userID)
+            id.eq(chatID) and originator.eq(userID)
         }
         if (deletedChatsCount != 1) {
             return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
         }
         return@databaseQuery Result.OK
+    }
+
+    private fun setID() = CoroutineScope(Dispatchers.IO).launch {
+        databaseQuery {
+            val chatsMaximalID = Chats.slice(Chats.id).selectAll()
+                .orderBy(Chats.id to SortOrder.DESC)
+                .limit(1)
+                .singleOrNull()
+            val dialogsMaximalID = Dialogs.slice(Dialogs.id).selectAll()
+                .orderBy(Dialogs.id to SortOrder.DESC)
+                .limit(1)
+                .singleOrNull()
+            val id = if (chatsMaximalID != null && dialogsMaximalID != null) max(
+                dialogsMaximalID[Dialogs.id], chatsMaximalID[Chats.id]
+            )
+            else if (chatsMaximalID == null && dialogsMaximalID != null) dialogsMaximalID[Dialogs.id]
+            else if (chatsMaximalID != null) chatsMaximalID[Chats.id]
+            else 1L
+            newID = AtomicLong(id + 1)
+        }
+    }
+
+    private fun getChatsParticipantsAndAdministrators(
+        chatsIDs: List<Long>
+    ): Pair<Map<Long, List<Int>>, Map<Long, List<Int>>> {
+        val participants = ChatsParticipants.select {
+            ChatsParticipants.chat_id.inList(chatsIDs)
+        }.map { it[ChatsParticipants.chat_id] to it[ChatsParticipants.participant_id] }
+        val administrators = ChatsAdministrators.select {
+            ChatsAdministrators.chat_id.inList(chatsIDs)
+        }.map { it[ChatsAdministrators.chat_id] to it[ChatsAdministrators.administrator_id] }
+        return buildMap<Long, List<Int>> {
+            for ((chatID, participantID) in participants) set(
+                key = chatID,
+                value = getOrDefault(chatID, listOf()).plus(participantID)
+            )
+        } to buildMap {
+            for ((chatID, administratorID) in administrators) set(
+                key = chatID,
+                value = getOrDefault(chatID, listOf()).plus(administratorID)
+            )
+        }
     }
 }

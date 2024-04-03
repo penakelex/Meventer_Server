@@ -9,5 +9,5 @@ interface MessagesService {
     suspend fun insertNewMessage(senderID: Int, message: MessageSend): Pair<Result, Long?>
     suspend fun getAllMessages(chatID: Long): Pair<Result, List<Message>?>
     suspend fun updateMessage(message: MessageUpdate, updaterID: Int): Result
-    suspend fun deleteMessage(messageID: Long, deleterID: Int): Result
+    suspend fun deleteMessage(messageID: Long, deleterID: Int): Pair<Result, String?>
 }

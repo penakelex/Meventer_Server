@@ -1,15 +1,13 @@
 package org.penakelex.database.tables
 
-import org.jetbrains.exposed.dao.id.LongIdTable
-import org.jetbrains.exposed.sql.IntegerColumnType
-import org.penakelex.database.extenstions.array
+import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.sql.Table
 
-object Chats : LongIdTable("chats") {
-    val name = text("name").nullable()
-    val participants = array<Int>("participants", IntegerColumnType())
-    val originator = integer("originator").references(Users.id)
-        .nullable()
-    val administrators = array<Int>("administrators", IntegerColumnType())
-        .nullable()
+object Chats : Table("chats") {
+    val id = long("id")
+    val name = text("name")
+    val originator = integer("originator")
+        .references(Users.id, onDelete = ReferenceOption.CASCADE)
     val open = bool("open").default(false)
+    override val primaryKey = PrimaryKey(id)
 }
