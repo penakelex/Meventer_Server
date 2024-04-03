@@ -1,6 +1,6 @@
 package org.penakelex.database.services.users
 
-import org.jetbrains.exposed.sql.insertIgnoreAndGetId
+import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.update
 import org.penakelex.database.extenstions.iLike
@@ -8,7 +8,7 @@ import org.penakelex.database.models.*
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Users
 import org.penakelex.ecnryption.cipher
-import org.penakelex.ecnryption.unCipher
+import org.penakelex.ecnryption.decipher
 import org.penakelex.response.Result
 import java.util.*
 
@@ -37,14 +37,14 @@ class UsersServiceImplementation(
             Users.select { Users.nickname.eq(user.nickname) }.singleOrNull()
         }
         if (userWithSameNickname != null) return@databaseQuery Result.USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS to null
-        return@databaseQuery Result.OK to Users.insertIgnoreAndGetId {
+        return@databaseQuery Result.OK to Users.insertAndGetId {
             it[email] = user.email
-            it[password] = user.password.cipher()
+            it[password] = user.password.cipher(addSalt = true)
             it[name] = user.name
             it[nickname] = user.nickname ?: UUID.randomUUID().toString()
             it[Users.avatar] = avatar ?: basicAvatar
             it[date_of_birth] = user.dateOfBirth
-        }?.value
+        }.value
     }
 
     override suspend fun getUserData(id: Int): Pair<Result, User?> = databaseQuery {
@@ -63,7 +63,7 @@ class UsersServiceImplementation(
 
     override suspend fun getUsersByNickname(nickname: String): Pair<Result, List<UserShort>> = databaseQuery {
         return@databaseQuery Result.OK to Users.select {
-            Users.nickname.iLike("$nickname%")
+            Users.nickname.iLike("%$nickname%")
         }.map {
             UserShort(
                 id = it[Users.id].value,
@@ -109,7 +109,6 @@ class UsersServiceImplementation(
             if (userData.name != null) it[name] = userData.name
             if (userData.nickname != null) it[nickname] = userData.nickname
             if (avatar != null) it[Users.avatar] = avatar
-
         }
         return@databaseQuery Result.OK
     }
@@ -127,7 +126,7 @@ class UsersServiceImplementation(
         Users.update(
             where = { Users.id.eq(userID) }
         ) {
-            it[Users.password] = password.cipher()
+            it[Users.password] = password.cipher(addSalt = true)
         }
         return@databaseQuery Result.OK
     }
@@ -138,7 +137,7 @@ class UsersServiceImplementation(
         }.singleOrNull()?.let {
             it[Users.id] to it[Users.password]
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_EMAIL to null
-        if (passwordFromDatabase.unCipher() != user.password) {
+        if (passwordFromDatabase.decipher().startsWith(user.password)) {
             return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH to null
         }
         return@databaseQuery Result.OK to id.value
@@ -150,7 +149,7 @@ class UsersServiceImplementation(
         }.singleOrNull()?.let {
             it[Users.password]
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
-        if (userPasswordFromDatabase.unCipher() != password) {
+        if (userPasswordFromDatabase.decipher() != password) {
             return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH
         }
         return@databaseQuery Result.OK

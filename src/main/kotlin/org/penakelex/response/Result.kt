@@ -102,13 +102,9 @@ enum class Result(
         HttpStatusCode.Forbidden.value,
         "Feedback from user with such ID to user with such ID already exists"
     ),
-    AS_ORIGINATOR_YOU_CAN_NOT_BE_SOMEONE_ELSE(
+    ORIGINATOR_CAN_NOT_BE_SOMEONE_ELSE(
         HttpStatusCode.Forbidden.value,
-        "As originator you can`t be someone else"
-    ),
-    YOU_ARE_ALREADY_ORGANIZER_OF_THIS_EVENT(
-        HttpStatusCode.Forbidden.value,
-        "You are already organizer of this event"
+        "Originator can`t be someone else"
     ),
     USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS(
         HttpStatusCode.Found.value,
@@ -165,5 +161,17 @@ enum class Result(
     AVATAR_IS_BASIC(
         HttpStatusCode.NotModified.value,
         "Avatar is basic"
+    ),
+    YOU_CAN_NOT_CHANGE_OTHER_USERS_ON_THIS_EVENT(
+        HttpStatusCode.Forbidden.value,
+        "You can`t change other users on this event"
+    ),
+    SESSION_WITH_SUCH_ID_NOT_FOUND(
+        HttpStatusCode.NotFound.value,
+        "Session with such ID not found"
+    ),
+    SESSION_INVALID(
+        HttpStatusCode.ExpectationFailed.value,
+        "Session invalid"
     )
 }

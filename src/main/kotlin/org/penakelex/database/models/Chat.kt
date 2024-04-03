@@ -34,10 +34,3 @@ data class ChatParticipantUpdate(
     val chatID: Long,
     val changingID: Int?
 )
-
-data class ChatSelect(
-    val participants: Array<Int>,
-    val administrators: Array<Int>,
-    val originator: Int,
-    val isOpen: Boolean
-)

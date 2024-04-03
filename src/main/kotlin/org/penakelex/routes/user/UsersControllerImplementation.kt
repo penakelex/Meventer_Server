@@ -17,10 +17,10 @@ import org.penakelex.fileSystem.FileManager
 import org.penakelex.response.Result
 import org.penakelex.response.toHttpStatusCode
 import org.penakelex.routes.extensions.getIntJWTPrincipalClaim
+import org.penakelex.session.JWTController
 import org.penakelex.session.JWTValues
 import org.penakelex.session.USER_ID
 import org.penakelex.session.UserEmailValues
-import org.penakelex.session.generateToken
 import java.util.*
 
 
@@ -30,7 +30,8 @@ class UsersControllerImplementation(
     private val properties: Properties,
     private val userEmailValues: UserEmailValues,
     private val authenticator: Authenticator,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val controllerJWT: JWTController
 ) : UsersController {
     override suspend fun sendEmailCode(call: ApplicationCall) {
         val userEmail = call.receive<UserEmail>()
@@ -86,9 +87,13 @@ class UsersControllerImplementation(
             user = user, avatar = images.singleOrNull()
         )
         if (userID == null) return call.response.status(insertionResult.toHttpStatusCode())
+        val expirationTime = controllerJWT.getExpirationTime()
+        val (_, sessionID) = service.sessionsService.createSession(
+            userID = userID, endOfValidity = expirationTime
+        )
         call.respond(
             insertionResult.toHttpStatusCode(),
-            generateToken(valuesJWT, userID, user.password)
+            controllerJWT.generateToken(valuesJWT, userID, sessionID, expirationTime)
         )
     }
 
@@ -97,9 +102,13 @@ class UsersControllerImplementation(
         val user = call.receive<UserLogin>()
         val (checkResult, userID) = service.usersService.isEmailAndPasswordCorrect(user)
         if (userID == null) return call.response.status(checkResult.toHttpStatusCode())
+        val expirationTime = controllerJWT.getExpirationTime()
+        val (_, sessionID) = service.sessionsService.createSession(
+            userID = userID, endOfValidity = expirationTime
+        )
         call.respond(
             checkResult.toHttpStatusCode(),
-            generateToken(valuesJWT, userID, user.password)
+            controllerJWT.generateToken(valuesJWT, userID, sessionID, expirationTime)
         )
     }
 

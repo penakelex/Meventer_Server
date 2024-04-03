@@ -27,9 +27,11 @@ data class Event(
     val images: List<String>,
     val description: String,
     val startTime: Instant,
-    val minimalAge: Short,
-    val maximalAge: Short?,
+    val minimalAge: UShort,
+    val maximalAge: UShort?,
     val price: Int,
+    //val place: String,
+    //val coordinates: Pair<String, String>,
     val originator: Int,
     val organizers: List<Int>,
     val participants: List<Int>,
@@ -51,9 +53,11 @@ data class EventCreate(
     val name: String,
     val description: String,
     val startTime: Instant,
-    val minimalAge: Short?,
-    val maximalAge: Short?,
+    val minimalAge: UShort?,
+    val maximalAge: UShort?,
     val price: Int?,
+    //val place: String,
+    //val coordinates: Pair<String, String>,
     val tags: List<String>?
 )
 
@@ -68,7 +72,7 @@ data class EventCreate(
 @Serializable
 data class EventSelection(
     val tags: List<String>?,
-    val age: Short?,
+    val age: UShort?,
     val minimalPrice: Int?,
     val maximalPrice: Int?,
     val sortBy: String?
@@ -110,7 +114,7 @@ data class EventsGet(
 
 /**
  * Data transfer object for updating event
- * @property eventID event ID
+ * @property id event ID
  * @property name event name to update
  * @property description event description to update
  * @property startTime event start time to change
@@ -120,30 +124,15 @@ data class EventsGet(
  * */
 @Serializable
 data class EventUpdate(
-    val eventID: Int,
+    val id: Int,
     val name: String?,
     val description: String?,
     val startTime: Instant?,
-    val minimalAge: Short?,
-    val maximalAge: Short?,
+    val minimalAge: UShort?,
+    val maximalAge: UShort?,
     val price: Int?,
+    //val place: String?,
+    //val coordinates: Pair<String, String>?,
     val tags: List<String>?,
     val deletedImages: List<String>?
-)
-
-/**
- * Data transfer object for event requirements
- * @property minimalAge minimal permitted age
- * @property maximalAge maximal permitted age
- * */
-data class EventRequirements(
-    val minimalAge: Short,
-    val maximalAge: Short?
-)
-
-data class EventSelectParticipant(
-    val participants: Array<Int>,
-    val organizers: Array<Int>,
-    val eventRequirements: EventRequirements,
-    val chatID: Long
 )

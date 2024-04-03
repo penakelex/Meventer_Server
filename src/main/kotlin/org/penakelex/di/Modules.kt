@@ -10,6 +10,7 @@ import org.penakelex.database.services.Service
 import org.penakelex.database.services.chats.ChatsServiceImplementation
 import org.penakelex.database.services.events.EventsServiceImplementation
 import org.penakelex.database.services.messages.MessagesServiceImplementation
+import org.penakelex.database.services.sessions.SessionsServiceImplementation
 import org.penakelex.database.services.users.UsersServiceImplementation
 import org.penakelex.database.services.usersEmailCodes.UsersEmailCodesServiceImplementation
 import org.penakelex.database.services.usersFeedback.UsersFeedbackServiceImplementation
@@ -20,6 +21,7 @@ import org.penakelex.routes.chat.ChatsControllerImplementation
 import org.penakelex.routes.event.EventsControllerImplementation
 import org.penakelex.routes.file.FilesControllerImplementation
 import org.penakelex.routes.user.UsersControllerImplementation
+import org.penakelex.session.JWTController
 import org.penakelex.session.JWTValues
 import org.penakelex.session.UserEmailValues
 import java.util.*
@@ -37,13 +39,14 @@ val databaseModule = module {
     single<Service> {
         Service(
             usersService = UsersServiceImplementation(
-                basicAvatar = "Аватарка.jpg"
+                basicAvatar = config.property("file.basicAvatar").getString()
             ),
             usersEmailCodesService = UsersEmailCodesServiceImplementation(),
             eventsService = EventsServiceImplementation(),
             usersFeedbackService = UsersFeedbackServiceImplementation(),
             chatsService = ChatsServiceImplementation(),
             messagesService = MessagesServiceImplementation(),
+            sessionsService = SessionsServiceImplementation(),
             database = get()
         )
     }
@@ -59,16 +62,24 @@ val securityModule = module {
             realm = config.property("jwt.realm").getString()
         )
     }
+    single {
+        JWTController()
+    }
 }
 
 val emailModule = module {
     val config = HoconApplicationConfig(ConfigFactory.load())
+    val basic = "mail.smtp"
+    val auth = "${basic}.auth"
+    val starttls = "${basic}.starttls.enable"
+    val host = "${basic}.host"
+    val port = "${basic}.port"
     single<Properties> {
         Properties().apply {
-            set("mail.smtp.auth", "true")
-            set("mail.smtp.starttls.enable", "true")
-            set("mail.smtp.host", "smtp.gmail.com")
-            set("mail.smtp.port", "587")
+            set(auth, config.property(auth).getString())
+            set(starttls, config.property(starttls).getString())
+            set(host, config.property(host).getString())
+            set(port, config.property(port).getString())
         }
     }
     single<UserEmailValues> {
@@ -76,8 +87,8 @@ val emailModule = module {
             email = config.property("email.email").getString(),
             password = config.property("email.password").getString(),
             personal = config.property("email.personal").getString(),
-            subject = "Подтверждение почты",
-            body = "Код подтверждения почты: "
+            subject = config.property("email.subject").getString(),
+            former = config.property("email.former").getString()
         )
     }
     single<Authenticator> {
@@ -107,7 +118,8 @@ val routingModule = module {
                 properties = get(),
                 userEmailValues = get(),
                 authenticator = get(),
-                fileManager = get()
+                fileManager = get(),
+                controllerJWT = get()
             ),
             eventsController = EventsControllerImplementation(
                 service = get(),
@@ -117,7 +129,8 @@ val routingModule = module {
                 fileManager = get()
             ),
             chatsController = ChatsControllerImplementation(
-                service = get()
+                service = get(),
+                fileManager = get()
             )
         )
     }

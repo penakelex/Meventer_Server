@@ -24,7 +24,6 @@ fun Application.configureRouting() {
 
 fun Route.greetingRoute() {
     get {
-        call.response.status(HttpStatusCode.OK)
-        call.respond("Hello, There! - Meventer")
+        call.respond(HttpStatusCode.OK, "Hello There! - Meventer")
     }
 }

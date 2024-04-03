@@ -49,17 +49,13 @@ class UsersEmailCodesServiceImplementation : UsersEmailCodesService, TableServic
     }
 
     override suspend fun verifyAndDeleteCode(email: UserEmail, code: String): Result = databaseQuery {
-        val (id, codeFromDatabase, expirationTime) = UsersEmailCodes.select {
+        val (codeFromDatabase, expirationTime) = UsersEmailCodes.select {
             UsersEmailCodes.email.eq(email)
         }.singleOrNull().let {
             if (it == null) return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
-            else Triple(
-                it[UsersEmailCodes.id],
-                it[UsersEmailCodes.code],
-                it[UsersEmailCodes.expiration_time]
-            )
+            else it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
         }
-        UsersEmailCodes.deleteWhere { UsersEmailCodes.id.eq(id) }
+        UsersEmailCodes.deleteWhere { UsersEmailCodes.email.eq(email) }
         return@databaseQuery if (code != codeFromDatabase
             || expirationTime <= System.currentTimeMillis()
         ) Result.VERIFICATION_CODE_IS_INCORRECT
