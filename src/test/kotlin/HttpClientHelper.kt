@@ -1,6 +1,9 @@
+
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import java.io.FileInputStream
 import java.security.KeyStore
@@ -20,21 +23,24 @@ class HttpClientHelper {
         }
     }
 
-    suspend fun <Type> withHttpClient(
+    suspend fun withHttpClient(
         config: HttpClientConfig<CIOEngineConfig>.() -> Unit = basicConfigForHttps,
-        body: suspend HttpClient.() -> Type?
-    ): Type? = HttpClient(CIO, config).use { httpClient ->
+        body: suspend HttpClient.() -> HttpResponse?
+    ): HttpResponse? = HttpClient(CIO, config).use { httpClient ->
         try {
             httpClient.body()
         } catch (exception: Exception) {
             exception.printStackTrace()
             null
         }
+    }.also {
+        println("Status - ${it?.status}")
+        println("Body - \"${it?.body<String>()}\"")
     }
 
     private fun getKeyStore(): KeyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
         load(
-            FileInputStream("build/keystore.jks"),
+            FileInputStream("keystore.jks"),
             "XgfX231TufOvGaeTU3Rwvjuf3k6jnvdsesRycToF0BQZ7tkzZ8qsd4yTtc5oNgql".toCharArray()
         )
     }

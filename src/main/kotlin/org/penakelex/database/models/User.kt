@@ -67,6 +67,7 @@ data class UserUpdateEmail(
 @Serializable
 data class UserUpdatePassword(
     val emailCode: String,
+    val oldPassword: String,
     val newPassword: String
 )
 

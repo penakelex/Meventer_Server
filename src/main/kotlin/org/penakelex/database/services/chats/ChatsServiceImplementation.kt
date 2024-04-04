@@ -14,11 +14,6 @@ import kotlin.math.max
 
 class ChatsServiceImplementation : TableService(), ChatsService {
     private lateinit var newID: AtomicLong
-
-    init {
-        setID()
-    }
-
     override suspend fun createChat(
         originatorID: Int,
         chat: ChatCreate,
@@ -30,6 +25,7 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         if (existingAdministratorsIDsCount != chat.administrators.size) {
             return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         }
+        if (!this::newID.isInitialized) setID().join()
         val id = newID.getAndIncrement()
         Chats.insert {
             it[Chats.id] = id
@@ -64,6 +60,7 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         if (existingUsersIDsCount != 2) {
             return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         }
+        if (!this::newID.isInitialized) setID().join()
         val id = newID.getAndIncrement()
         Dialogs.insert {
             it[Dialogs.id] = id

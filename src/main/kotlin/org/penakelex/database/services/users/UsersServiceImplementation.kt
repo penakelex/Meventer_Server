@@ -96,10 +96,12 @@ class UsersServiceImplementation(
         avatar: String?
     ): Result = databaseQuery {
         if (userData.nickname != null) {
-            val userWithSameNickname = Users.select {
+            val userIDWithSameNickname = Users.select {
                 Users.nickname.eq(userData.nickname)
-            }.singleOrNull()
-            if (userWithSameNickname != null) {
+            }.singleOrNull()?.let {
+                it[Users.id].value
+            }
+            if (userIDWithSameNickname != userID) {
                 return@databaseQuery Result.USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS
             }
         }
@@ -122,11 +124,23 @@ class UsersServiceImplementation(
         return@databaseQuery Result.OK
     }
 
-    override suspend fun updatePassword(userID: Int, password: String): Result = databaseQuery {
+    override suspend fun updatePassword(
+        userID: Int,
+        oldPassword: String,
+        newPassword: String
+    ): Result = databaseQuery {
+        val passwordFromDatabase = Users.slice(Users.password).select {
+            Users.id.eq(userID)
+        }.singleOrNull()?.let {
+            it[Users.password]
+        } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
+        if (!passwordFromDatabase.startsWith(oldPassword.cipher())) {
+            return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH
+        }
         Users.update(
             where = { Users.id.eq(userID) }
         ) {
-            it[Users.password] = password.cipher(addSalt = true)
+            it[password] = newPassword.cipher(addSalt = true)
         }
         return@databaseQuery Result.OK
     }
@@ -137,7 +151,7 @@ class UsersServiceImplementation(
         }.singleOrNull()?.let {
             it[Users.id] to it[Users.password]
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_EMAIL to null
-        if (passwordFromDatabase.decipher().startsWith(user.password)) {
+        if (!passwordFromDatabase.startsWith(user.password.cipher())) {
             return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH to null
         }
         return@databaseQuery Result.OK to id.value

@@ -42,7 +42,6 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
                     comment = it[UsersFeedback.comment]
                 )
             }
-        if (feedbacks.isEmpty()) return@databaseQuery Result.FEEDBACKS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
         return@databaseQuery Result.OK to feedbacks
     }
 

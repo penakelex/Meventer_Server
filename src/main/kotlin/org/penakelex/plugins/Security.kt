@@ -36,8 +36,8 @@ fun Application.configureSecurity() {
                         ?: return@validate null,
                     endOfValidity = jwtCredential.payload.expiresAt.time
                 ) != Result.OK
-                if (isTokenNotValid) return@validate null
-                return@validate JWTPrincipal(jwtCredential.payload)
+                if (isTokenNotValid) null
+                else JWTPrincipal(jwtCredential.payload)
             }
             challenge { _, _ ->
                 call.response.status(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED.toHttpStatusCode())

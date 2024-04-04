@@ -17,4 +17,5 @@ interface UsersController {
     suspend fun getFeedbackToUser(call: ApplicationCall)
     suspend fun updateFeedback(call: ApplicationCall)
     suspend fun deleteFeedback(call: ApplicationCall)
+    suspend fun logOut(call: ApplicationCall)
 }
