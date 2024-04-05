@@ -136,3 +136,9 @@ data class EventUpdate(
     val tags: List<String>?,
     val deletedImages: List<String>?
 )
+
+@Serializable
+data class EventParticipant(
+    val changingID: Int?,
+    val eventID: Int
+)

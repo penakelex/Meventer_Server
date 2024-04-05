@@ -79,7 +79,7 @@ class MessagesServiceImplementation : TableService(), MessagesService {
         if (deletedMessagesCount != 1) {
             return@databaseQuery Result.MESSAGE_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT to null
         }
-        val attachment = MessagesAttachments.select {
+        val attachment = MessagesAttachments.slice(MessagesAttachments.attachment).select {
             MessagesAttachments.message_id.eq(messageID)
         }.singleOrNull()?.let {
             it[MessagesAttachments.attachment]

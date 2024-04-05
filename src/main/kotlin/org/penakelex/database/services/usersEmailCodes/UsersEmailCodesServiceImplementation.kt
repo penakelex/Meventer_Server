@@ -13,6 +13,7 @@ import org.penakelex.response.Result
 
 
 private const val TEN_MINUTES_IN_MILLIS = 600_000
+
 /**
  * UsersEmailCodes table service implementation
  * */
@@ -36,12 +37,11 @@ class UsersEmailCodesServiceImplementation : UsersEmailCodesService, TableServic
     }
 
     override suspend fun verifyCode(emailCode: UserEmailCode): Result = databaseQuery {
-        val (code, expirationTime) = UsersEmailCodes.select {
+        val (code, expirationTime) = UsersEmailCodes.slice(UsersEmailCodes.code, UsersEmailCodes.email).select {
             UsersEmailCodes.email.eq(emailCode.email)
-        }.singleOrNull().let {
-            if (it == null) return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
-            else it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
-        }
+        }.singleOrNull()?.let {
+            it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
+        } ?: return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
         return@databaseQuery if (code != emailCode.code
             || System.currentTimeMillis() >= expirationTime
         ) Result.VERIFICATION_CODE_IS_INCORRECT
@@ -49,12 +49,12 @@ class UsersEmailCodesServiceImplementation : UsersEmailCodesService, TableServic
     }
 
     override suspend fun verifyAndDeleteCode(email: UserEmail, code: String): Result = databaseQuery {
-        val (codeFromDatabase, expirationTime) = UsersEmailCodes.select {
-            UsersEmailCodes.email.eq(email)
-        }.singleOrNull().let {
-            if (it == null) return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
-            else it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
-        }
+        val (codeFromDatabase, expirationTime) = UsersEmailCodes
+            .slice(UsersEmailCodes.code, UsersEmailCodes.expiration_time).select {
+                UsersEmailCodes.email.eq(email)
+            }.singleOrNull()?.let {
+                it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
+            } ?: return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
         UsersEmailCodes.deleteWhere { UsersEmailCodes.email.eq(email) }
         return@databaseQuery if (code != codeFromDatabase
             || expirationTime <= System.currentTimeMillis()

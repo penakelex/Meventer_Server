@@ -1,4 +1,3 @@
-
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
@@ -11,22 +10,23 @@ import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class User {
-    private val httpClientHelper = HttpClientHelper()
+const val email1 = "alexeykoninsky129@gmail.com"
+const val password1 = "password"
+const val token1 =
+    "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJtZXZlbnRlciB1c2VycyIsImlzcyI6InBlbmFrZWxleCIsInVzZXJJRCI6MiwicGFzc3dvcmQiOiJDdVciLCJleHAiOjE3NDM3ODQ0ODF9.45iiVrQfBjaxDokgJTPyV2xSzKe5cGQQXi7_hYhBWwjzHFpa5GK5ofqQBEGbbv0Xl-ci26wGmbW1XgznlPZSNA"
 
+const val email2 = "cool.teamer.alex@gmail.com"
+const val password2 = "12345678"
+const val token2 =
+    "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJtZXZlbnRlciB1c2VycyIsImlzcyI6InBlbmFrZWxleCIsInVzZXJJRCI6MywicGFzc3dvcmQiOiJrR0hPIiwiZXhwIjoxNzQzODI5NDE5fQ.3HyJDDZTXomioAufitAPiQDMJyDIQDS99-ttUDNnHDqxzkJ3SkRTIe4mz_SrjQ-9adNzO7daXngy9mRX3anlSw"
+
+class User {
+
+    private val httpClientHelper = HttpClientHelper()
     private val basicURL = "${httpClientHelper.basicURL}/user"
     private val updateBasicURL = "$basicURL/update"
+
     private val feedbackBasicURL = "$basicURL/feedback"
-
-    private val email1 = "alexeykoninsky129@gmail.com"
-    private val password1 = "password"
-    private val token1 =
-        "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJtZXZlbnRlciB1c2VycyIsImlzcyI6InBlbmFrZWxleCIsInVzZXJJRCI6MiwicGFzc3dvcmQiOiJDdVciLCJleHAiOjE3NDM3ODQ0ODF9.45iiVrQfBjaxDokgJTPyV2xSzKe5cGQQXi7_hYhBWwjzHFpa5GK5ofqQBEGbbv0Xl-ci26wGmbW1XgznlPZSNA"
-
-    private val email2 = "cool.teamer.alex@gmail.com"
-    private val password2 = "12345678"
-    private val token2 =
-        "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJtZXZlbnRlciB1c2VycyIsImlzcyI6InBlbmFrZWxleCIsInVzZXJJRCI6MywicGFzc3dvcmQiOiJBWW0iLCJleHAiOjE3NDM3OTI2MDZ9.UhC2_zFYB_jf7FoiBxlCroafIDOb0xEDOx8tJV32epZLAZoFacS4W3qfRnASbSwL4tTwdziZDT5WMxrh1LJ1Uw"
 
     @Test
     fun sendEmailCodeTest() = testApplication {
@@ -100,8 +100,8 @@ class User {
             post("$basicURL/login") {
                 setBody(
                     UserLogin(
-                        email = email1,
-                        password = password1
+                        email = email2,
+                        password = password2
                     )
                 )
                 contentType(ContentType.Application.Json)

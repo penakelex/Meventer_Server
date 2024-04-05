@@ -15,7 +15,7 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
         if (fromUserID == feedback.toUserID) return@databaseQuery Result.YOU_CAN_NOT_FEEDBACK_YOURSELF
         val usersCount = Users.select {
             Users.id.eq(fromUserID) or Users.id.eq(feedback.toUserID)
-        }.toList().size
+        }.count().toInt()
         if (usersCount != 2) return@databaseQuery Result.NO_USER_WITH_SUCH_ID
         val feedbackWithSameUsersID = UsersFeedback.select {
             UsersFeedback.to_user_id.eq(feedback.toUserID) and UsersFeedback.from_user_id.eq(fromUserID)

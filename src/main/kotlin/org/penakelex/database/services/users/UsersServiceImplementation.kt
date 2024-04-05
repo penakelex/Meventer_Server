@@ -62,7 +62,7 @@ class UsersServiceImplementation(
     }
 
     override suspend fun getUsersByNickname(nickname: String): Pair<Result, List<UserShort>> = databaseQuery {
-        return@databaseQuery Result.OK to Users.select {
+        return@databaseQuery Result.OK to Users.slice(Users.id, Users.nickname, Users.avatar).select {
             Users.nickname.iLike("%$nickname%")
         }.map {
             UserShort(
@@ -74,14 +74,14 @@ class UsersServiceImplementation(
     }
 
     override suspend fun getUserEmail(id: Int): Pair<Result, String?> = databaseQuery {
-        val userEmail = Users.select { Users.id.eq(id) }.singleOrNull()?.let {
+        val userEmail = Users.slice(Users.email).select { Users.id.eq(id) }.singleOrNull()?.let {
             it[Users.email]
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         return@databaseQuery Result.OK to userEmail
     }
 
     override suspend fun getUserAvatar(id: Int): Pair<Result, String?> = databaseQuery {
-        val userAvatar = Users.select { Users.id.eq(id) }.singleOrNull()?.let {
+        val userAvatar = Users.slice(Users.avatar).select { Users.id.eq(id) }.singleOrNull()?.let {
             it[Users.avatar]
         } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
         if (userAvatar == basicAvatar) {
@@ -96,7 +96,7 @@ class UsersServiceImplementation(
         avatar: String?
     ): Result = databaseQuery {
         if (userData.nickname != null) {
-            val userIDWithSameNickname = Users.select {
+            val userIDWithSameNickname = Users.slice(Users.id).select {
                 Users.nickname.eq(userData.nickname)
             }.singleOrNull()?.let {
                 it[Users.id].value
@@ -146,7 +146,7 @@ class UsersServiceImplementation(
     }
 
     override suspend fun isEmailAndPasswordCorrect(user: UserLogin): Pair<Result, Int?> = databaseQuery {
-        val (id, passwordFromDatabase) = Users.select {
+        val (id, passwordFromDatabase) = Users.slice(Users.id, Users.password).select {
             Users.email.eq(user.email)
         }.singleOrNull()?.let {
             it[Users.id] to it[Users.password]
@@ -158,7 +158,7 @@ class UsersServiceImplementation(
     }
 
     override suspend fun isTokenValid(userID: Int, password: String): Result = databaseQuery {
-        val userPasswordFromDatabase = Users.select {
+        val userPasswordFromDatabase = Users.slice(Users.password).select {
             Users.id.eq(userID)
         }.singleOrNull()?.let {
             it[Users.password]
