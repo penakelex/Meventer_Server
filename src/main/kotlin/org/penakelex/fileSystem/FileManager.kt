@@ -10,7 +10,7 @@ interface FileManager {
      * @return list of file names
      * */
     suspend fun uploadFiles(fileItems: List<PartData.FileItem>): List<String>
-    suspend fun uploadFile(fileBytes: ByteArray): String?
+    suspend fun uploadFile(fileBytes: ByteArray, contentType: String): String?
     /**
      * Downloads file by the [fileName]
      * @param fileName file name to download

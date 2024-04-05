@@ -1,4 +1,3 @@
-
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -34,8 +33,12 @@ class HttpClientHelper {
             null
         }
     }.also {
-        println("Status - ${it?.status}")
-        println("Body - \"${it?.body<String>()}\"")
+        try {
+            println("Status - ${it?.status}")
+            println("Body - \"${it?.body<String>()}\"")
+        } catch (exception: Exception) {
+            exception.printStackTrace()
+        }
     }
 
     private fun getKeyStore(): KeyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply {

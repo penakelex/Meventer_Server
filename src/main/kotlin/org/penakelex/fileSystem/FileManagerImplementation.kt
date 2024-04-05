@@ -31,10 +31,13 @@ class FileManagerImplementation(private val directory: String) : FileManager {
         }.map { it.await() }
     }
 
-    override suspend fun uploadFile(fileBytes: ByteArray): String? = coroutineScope {
+    override suspend fun uploadFile(fileBytes: ByteArray, contentType: String): String? = coroutineScope {
         async(Dispatchers.IO) {
             try {
-                with(File(File_Name_Pattern.format(newFileNumber.getAndIncrement()))) {
+                val filePath = "$directory\\${
+                    File_Name_Pattern.format(newFileNumber.getAndIncrement())
+                }.${contentType.substringAfterLast("/")}"
+                with(File(filePath)) {
                     writeBytes(fileBytes)
                     return@async name
                 }
