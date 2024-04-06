@@ -161,5 +161,9 @@ enum class Result(
     EMPTY_CONTENT_TYPE(
         HttpStatusCode.ExpectationFailed.value,
         "Empty content type"
+    ),
+    YOU_CAN_NOT_JOIN_A_CLOSED_CHAT_YOURSELF(
+        HttpStatusCode.Forbidden.value,
+        "You can`t join a closed chat yourself"
     )
 }

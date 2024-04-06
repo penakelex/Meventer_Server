@@ -38,10 +38,12 @@ class ChatsServiceImplementation : TableService(), ChatsService {
                 this[ChatsAdministrators.chat_id] = id
                 this[ChatsAdministrators.administrator_id] = administratorID
             }
-            ChatsParticipants.batchInsert(chat.administrators) { participantID ->
-                this[ChatsParticipants.chat_id] = id
-                this[ChatsParticipants.participant_id] = participantID
-            }
+        }
+        ChatsParticipants.batchInsert(
+            data = chat.administrators.plus(originatorID)
+        ) { participantID ->
+            this[ChatsParticipants.chat_id] = id
+            this[ChatsParticipants.participant_id] = participantID
         }
         return@databaseQuery Result.OK to id
     }
@@ -95,6 +97,16 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         val dialogs = Dialogs.select {
             Dialogs.first.eq(userID) or Dialogs.second.eq(userID)
         }.toList()
+        val dialogsUsers = Users.slice(Users.id, Users.name).select {
+            Users.id.inList(
+                buildSet {
+                    for (dialog in dialogs) {
+                        add(dialog[Dialogs.first])
+                        add(dialog[Dialogs.second])
+                    }
+                }.minus(userID)
+            )
+        }.associate { it[Users.id].value to it[Users.name] }
         val chatsLastMessages = Messages.select {
             Messages.chat_id.inList(chatsIDs.plus(dialogs.map { it[Dialogs.id] }))
         }.toList()
@@ -121,17 +133,38 @@ class ChatsServiceImplementation : TableService(), ChatsService {
                 )
             }
         }
-        val (participants, administrators) = getChatsParticipantsAndAdministrators(chatsIDs)
+        val (participants, administrators) = getChatsParticipantsAndAdministrators(
+            chatsIDs = chatsIDs
+        )
         return@databaseQuery Result.OK to chats.map {
             val id = it[Chats.id]
             Chat(
+                id = id,
                 name = it[Chats.name],
                 originator = it[Chats.originator],
-                participants = participants[id]!!,
-                administrators = administrators[id]!!,
-                lastMessages = lastMessages[id]!!
+                participants = participants.getOrDefault(id, listOf()),
+                administrators = administrators.getOrDefault(id, listOf()),
+                lastMessages = lastMessages.getOrDefault(id, listOf())
             )
-        }
+        }.plus(
+            dialogs.map {
+                val dialogID = it[Dialogs.id]
+                val first = it[Dialogs.first]
+                val second = it[Dialogs.second]
+                val companionID = if (first != userID) first else second
+                Chat(
+                    id = dialogID,
+                    name = dialogsUsers.getOrDefault(
+                        companionID,
+                        ""
+                    ),
+                    originator = null,
+                    participants = listOf(first, second),
+                    administrators = administrators.getOrDefault(dialogID, listOf()),
+                    lastMessages = lastMessages.getOrDefault(dialogID, listOf())
+                )
+            }
+        )
     }
 
     override suspend fun changeUserAsParticipant(chatID: Long, userID: Int, changerID: Int?): Result = databaseQuery {
@@ -141,25 +174,31 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         if (isUsersNotExists) {
             return@databaseQuery Result.NO_USER_WITH_SUCH_ID
         }
-        val originator = Chats.select {
+        val (originator, isOpen) = Chats.slice(Chats.originator, Chats.open).select {
             Chats.id.eq(chatID)
         }.singleOrNull()?.let {
-            it[Chats.originator]// to it[Chats.open]
+            it[Chats.originator] to it[Chats.open]
         } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
         val isChangingUserAdministrator = ChatsAdministrators.select {
             ChatsAdministrators.chat_id.eq(chatID) and ChatsAdministrators.administrator_id.eq(userID)
         }.singleOrNull() != null
-        val isChangerAdministrator = if (changerID != null) ChatsAdministrators.select {
-            ChatsAdministrators.chat_id.eq(chatID) and ChatsAdministrators.administrator_id.eq(changerID)
-        }.singleOrNull() != null
-        else isChangingUserAdministrator
+        val isChangerAdministrator =
+            if (changerID != null) ChatsAdministrators.select {
+                ChatsAdministrators.chat_id.eq(chatID) and ChatsAdministrators.administrator_id.eq(changerID)
+            }.singleOrNull() != null
+            else isChangingUserAdministrator
         if (changerID != null && !isChangerAdministrator && originator != changerID) {
             return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_CHAT
         }
         val isDeletingUser = ChatsParticipants.select {
             ChatsParticipants.participant_id.eq(userID) and ChatsParticipants.chat_id.eq(chatID)
         }.singleOrNull() != null
-        if (isChangingUserAdministrator && changerID != null && changerID != originator && isDeletingUser) {
+        if (changerID == null && !isDeletingUser && !isOpen) {
+            return@databaseQuery Result.YOU_CAN_NOT_JOIN_A_CLOSED_CHAT_YOURSELF
+        }
+        val isChangerNotOriginator = changerID != null && changerID != originator
+        val isChangerCanNotDeleteUser = isChangingUserAdministrator && isChangerNotOriginator && isDeletingUser
+        if (isChangerCanNotDeleteUser) {
             return@databaseQuery Result.YOU_CAN_NOT_DELETE_ADMINISTRATOR_FROM_CHAT_AS_ADMINISTRATOR
         }
         if (isDeletingUser) {
@@ -210,13 +249,18 @@ class ChatsServiceImplementation : TableService(), ChatsService {
     }
 
     override suspend fun updateChatName(chat: ChatNameUpdate, userID: Int): Result = databaseQuery {
-        val updatedChatsCount = Chats.update(
-            where = { Chats.id.eq(chat.id) and Chats.originator.eq(userID) }
+        val originator = Chats.slice(Chats.originator).select {
+            Chats.id.eq(chat.id)
+        }.singleOrNull()?.let {
+            it[Chats.originator]
+        } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
+        if (originator != userID) {
+            return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_CHAT
+        }
+        Chats.update(
+            where = { Chats.id.eq(chat.id) }
         ) {
             it[name] = chat.name
-        }
-        if (updatedChatsCount != 1) {
-            return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
         }
         return@databaseQuery Result.OK
     }
@@ -256,7 +300,9 @@ class ChatsServiceImplementation : TableService(), ChatsService {
     ): Pair<Map<Long, List<Int>>, Map<Long, List<Int>>> {
         val participants = ChatsParticipants.select {
             ChatsParticipants.chat_id.inList(chatsIDs)
-        }.map { it[ChatsParticipants.chat_id] to it[ChatsParticipants.participant_id] }
+        }.map {
+            it[ChatsParticipants.chat_id] to it[ChatsParticipants.participant_id]
+        }
         val administrators = ChatsAdministrators.select {
             ChatsAdministrators.chat_id.inList(chatsIDs)
         }.map { it[ChatsAdministrators.chat_id] to it[ChatsAdministrators.administrator_id] }

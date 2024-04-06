@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Chat(
+    val id: Long,
     val name: String?,
     val originator: Int?,
     val participants: List<Int>,

@@ -2,6 +2,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.websocket.*
 import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import java.io.FileInputStream
@@ -11,10 +12,22 @@ import javax.net.ssl.X509TrustManager
 
 class HttpClientHelper {
     val basicURL = "https://127.0.0.1:8080"
-    val basicConfigForHttps: HttpClientConfig<CIOEngineConfig>.() -> Unit = {
+    private val basicConfigForHttps: HttpClientConfig<CIOEngineConfig>.() -> Unit = {
         install(ContentNegotiation) {
             json()
         }
+        engine {
+            https {
+                trustManager = getTrustManager()
+            }
+        }
+    }
+
+    private val basicConfigForWebsockets: HttpClientConfig<CIOEngineConfig>.() -> Unit = {
+        install(ContentNegotiation) {
+            json()
+        }
+        install(WebSockets)
         engine {
             https {
                 trustManager = getTrustManager()
@@ -38,6 +51,17 @@ class HttpClientHelper {
             println("Body - \"${it?.body<String>()}\"")
         } catch (exception: Exception) {
             exception.printStackTrace()
+        }
+    }
+
+    suspend fun withHttpClientForWebsockets(
+        config: HttpClientConfig<CIOEngineConfig>.() -> Unit = basicConfigForWebsockets,
+        body: suspend HttpClient.() -> DefaultClientWebSocketSession?
+    ) = HttpClient(CIO, config).use {
+        try {
+            it.body()
+        } catch (exception: Exception) {
+            null
         }
     }
 

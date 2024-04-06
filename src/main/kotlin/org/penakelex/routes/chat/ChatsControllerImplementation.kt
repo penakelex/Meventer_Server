@@ -152,20 +152,24 @@ class ChatsControllerImplementation(
         deleterID: Int,
         deletedMessage: MessageDelete
     ) {
-        val (gettingChatParticipantsResult, chatParticipants) = service.chatsService.getChatParticipants(
-            chatID = deletedMessage.chatID
-        )
-        if (gettingChatParticipantsResult != Result.OK) return
-        val (messageDeleteResult, attachment) = service.messagesService.deleteMessage(
-            messageID = deletedMessage.id,
-            deleterID = deleterID
-        )
-        if (messageDeleteResult != Result.OK) return
-        fileManager.deleteFiles(listOf(attachment!!))
-        sendToClients(
-            chatParticipants = chatParticipants!!.toSet(),
-            message = deletedMessage.id.toString()
-        )
+        try {
+            val (gettingChatParticipantsResult, chatParticipants) = service.chatsService.getChatParticipants(
+                chatID = deletedMessage.chatID
+            )
+            if (gettingChatParticipantsResult != Result.OK) return
+            val (messageDeleteResult, attachment) = service.messagesService.deleteMessage(
+                messageID = deletedMessage.id,
+                deleterID = deleterID
+            )
+            if (messageDeleteResult != Result.OK) return
+            if (attachment != null) fileManager.deleteFiles(listOf(attachment))
+            sendToClients(
+                chatParticipants = chatParticipants!!.toSet(),
+                message = "${deletedMessage.id}"
+            )
+        } catch (exception: Exception) {
+            exception.printStackTrace()
+        }
     }
 
     private suspend fun sendToClients(
@@ -189,7 +193,7 @@ class ChatsControllerImplementation(
         call.respond(
             result.toHttpStatusCode(),
             id,
-            typeInfo<Long>()
+            typeInfo<Long?>()
         )
     }
 
@@ -201,7 +205,7 @@ class ChatsControllerImplementation(
         call.respond(
             result.toHttpStatusCode(),
             chatID,
-            typeInfo<Long>()
+            typeInfo<Long?>()
         )
     }
 
@@ -212,7 +216,7 @@ class ChatsControllerImplementation(
         call.respond(
             result.toHttpStatusCode(),
             participants,
-            typeInfo<List<Int>>()
+            typeInfo<List<Int>?>()
         )
     }
 
@@ -223,7 +227,7 @@ class ChatsControllerImplementation(
         call.respond(
             result.toHttpStatusCode(),
             chats,
-            typeInfo<List<Chat>>()
+            typeInfo<List<Chat>?>()
         )
     }
 
@@ -245,25 +249,28 @@ class ChatsControllerImplementation(
         call.respond(
             gettingAllMessagesResult.toHttpStatusCode(),
             messages,
-            typeInfo<List<Message>>()
+            typeInfo<List<Message>?>()
         )
     }
 
     override suspend fun changeUserAsParticipant(call: ApplicationCall) {
         val (chatID, changingID) = call.receive<ChatParticipantUpdate>()
         val userID = call.getIntJWTPrincipalClaim(USER_ID)
-        val changingResult = if (changingID == null) service.chatsService.changeUserAsParticipant(
-            chatID = chatID,
-            userID = userID
-        ) else service.chatsService.changeUserAsParticipant(
-            chatID = chatID,
-            userID = changingID,
-            changerID = userID
-        )
+        val changingResult =
+            if (changingID == null) service.chatsService.changeUserAsParticipant(
+                chatID = chatID,
+                userID = userID
+            ) else service.chatsService.changeUserAsParticipant(
+                chatID = chatID,
+                userID = changingID,
+                changerID = userID
+            )
         call.response.status(changingResult.toHttpStatusCode())
     }
 
-    override suspend fun changeParticipantAsAdministrator(call: ApplicationCall) = call.response.status(
+    override suspend fun changeParticipantAsAdministrator(
+        call: ApplicationCall
+    ) = call.response.status(
         service.chatsService.changeParticipantAsAdministrator(
             updaterID = call.getIntJWTPrincipalClaim(USER_ID),
             chatAdministrator = call.receive<ChatAdministratorUpdate>()
