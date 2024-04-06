@@ -1,10 +1,7 @@
 package org.penakelex.database.services.sessions
 
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insertAndGetId
-import org.jetbrains.exposed.sql.select
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Sessions
 import org.penakelex.response.Result
@@ -14,10 +11,21 @@ class SessionsServiceImplementation : TableService(), SessionsService {
         userID: Int,
         endOfValidity: Long
     ): Pair<Result, Int> = databaseQuery {
-        return@databaseQuery Result.OK to Sessions.insertAndGetId {
+        val existingSessionID = Sessions.select {
+            Sessions.user_id.eq(userID)
+        }.singleOrNull()?.let {
+            it[Sessions.id].value
+        }
+        if (existingSessionID != null) Sessions.update(
+            where = { Sessions.user_id.eq(userID) }
+        ) {
+            it[end_of_validity] = endOfValidity
+        }
+        val sessionID = existingSessionID ?: Sessions.insertAndGetId {
             it[user_id] = userID
             it[end_of_validity] = endOfValidity
         }.value
+        return@databaseQuery Result.OK to sessionID
     }
 
     override suspend fun checkSession(

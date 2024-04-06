@@ -37,14 +37,14 @@ data class UserLogin(
 
 /**
  * Data transfer object for user
- * @property id user ID
+ * @property userID user ID
  * @property email user email
  * @property avatar user avatar
  * @property dateOfBirth user date of birth
  * */
 @Serializable
 data class User(
-    val id: Int,
+    val userID: Int,
     val email: String,
     val name: String,
     val nickname: String,
@@ -67,12 +67,13 @@ data class UserUpdateEmail(
 @Serializable
 data class UserUpdatePassword(
     val emailCode: String,
+    val oldPassword: String,
     val newPassword: String
 )
 
 @Serializable
 data class UserShort(
-    val id: Int,
+    val userID: Int,
     val nickname: String,
     val avatar: String
 )

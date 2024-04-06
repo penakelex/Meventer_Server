@@ -16,16 +16,16 @@ interface UsersService {
     suspend fun insertNewUser(user: UserRegister, avatar: String?): Pair<Result, Int?>
     /**
      * Gets from Users table data about user by his ID
-     * @param id user ID to get his data
+     * @param userID user ID to get his data
      * @return
      * */
-    suspend fun getUserData(id: Int): Pair<Result, User?>
+    suspend fun getUserData(userID: Int): Pair<Result, User?>
     suspend fun getUsersByNickname(nickname: String): Pair<Result, List<UserShort>>
-    suspend fun getUserEmail(id: Int): Pair<Result, String?>
-    suspend fun getUserAvatar(id: Int): Pair<Result, String?>
+    suspend fun getUserEmail(userID: Int): Pair<Result, String?>
+    suspend fun getUserAvatar(userID: Int): Pair<Result, String?>
     suspend fun updateUserData(userID: Int, userData: UserUpdate, avatar: String?): Result
     suspend fun updateEmail(userID: Int, email: UserEmail): Result
-    suspend fun updatePassword(userID: Int, password: String): Result
+    suspend fun updatePassword(userID: Int, oldPassword: String, newPassword: String): Result
 
     /**
      * Checks if user email and password matches those from database

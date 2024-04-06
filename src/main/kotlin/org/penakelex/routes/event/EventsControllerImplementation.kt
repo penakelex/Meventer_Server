@@ -77,16 +77,16 @@ class EventsControllerImplementation(
         call.respond(
             result.toHttpStatusCode(),
             event,
-            typeInfo<Event>()
+            typeInfo<Event?>()
         )
     }
 
     override suspend fun changeUserAsParticipant(call: ApplicationCall) {
+        val event = call.receive<EventParticipant>()
         val changerID = call.getIntJWTPrincipalClaim(USER_ID)
-        val changingID = call.receiveNullable<Int>()
         val (changingResult, chatID) = service.eventsService.changeUserAsParticipant(
-            changingID = changingID ?: changerID,
-            eventID = call.receive<Int>(),
+            changingID = event.changingID ?: changerID,
+            eventID = event.eventID,
             changerID = changerID
         )
         if (changingResult == Result.OK) service.chatsService.changeUserAsParticipant(
@@ -120,7 +120,7 @@ class EventsControllerImplementation(
                 service.eventsService.getUserEvents(id, actual, aforetime)
             }
 
-            EventsType.Featured.type -> {
+            EventsType.InFavourites.type -> {
                 service.eventsService.getInFavouritesEvents(id, actual, aforetime)
             }
 
@@ -141,7 +141,7 @@ class EventsControllerImplementation(
         call.respond(
             gettingResult.toHttpStatusCode(),
             events,
-            typeInfo<List<Event>>()
+            typeInfo<List<Event>?>()
         )
     }
 
@@ -149,6 +149,6 @@ class EventsControllerImplementation(
         val (result, events) = service.eventsService.getGlobalEvents(
             selection = call.receive<EventSelection>()
         )
-        call.respond(result.toHttpStatusCode(), events, typeInfo<List<Event>>())
+        call.respond(result.toHttpStatusCode(), events, typeInfo<List<Event>?>())
     }
 }

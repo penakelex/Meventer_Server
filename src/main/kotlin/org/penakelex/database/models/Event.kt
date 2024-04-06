@@ -9,7 +9,7 @@ import java.time.Instant
 
 /**
  * Data transfer object for event
- * @property id event ID
+ * @property eventID event ID
  * @property name event name
  * @property images list of images names
  * @property description event description
@@ -22,7 +22,7 @@ import java.time.Instant
  * */
 @Serializable
 data class Event(
-    val id: Int,
+    val eventID: Int,
     val name: String,
     val images: List<String>,
     val description: String,
@@ -114,7 +114,7 @@ data class EventsGet(
 
 /**
  * Data transfer object for updating event
- * @property id event ID
+ * @property eventID event ID
  * @property name event name to update
  * @property description event description to update
  * @property startTime event start time to change
@@ -124,7 +124,7 @@ data class EventsGet(
  * */
 @Serializable
 data class EventUpdate(
-    val id: Int,
+    val eventID: Int,
     val name: String?,
     val description: String?,
     val startTime: Instant?,
@@ -135,4 +135,10 @@ data class EventUpdate(
     //val coordinates: Pair<String, String>?,
     val tags: List<String>?,
     val deletedImages: List<String>?
+)
+
+@Serializable
+data class EventParticipant(
+    val changingID: Int?,
+    val eventID: Int
 )

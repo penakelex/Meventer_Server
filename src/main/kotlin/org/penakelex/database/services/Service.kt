@@ -34,13 +34,22 @@ class Service(
         transaction(database) {
             SchemaUtils.createSchema()
             SchemaUtils.create(
+                Chats,
+                ChatsAdministrators,
+                ChatsParticipants,
+                Dialogs,
+                Events,
+                EventsImages,
+                EventsInFavourites,
+                EventsOrganizers,
+                EventsParticipants,
+                EventsTags,
+                Messages,
+                MessagesAttachments,
+                Sessions,
                 Users,
                 UsersEmailCodes,
-                Events,
-                UsersFeedback,
-                Chats,
-                Messages,
-                MessagesAttachments
+                UsersFeedback
             )
         }
     }

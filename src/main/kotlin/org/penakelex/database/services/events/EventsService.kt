@@ -8,11 +8,11 @@ interface EventsService {
     suspend fun updateEvent(event: EventUpdate, organizerID: Int, newImages: List<String>): Result
     suspend fun deleteEvent(eventID: Int, originatorID: Int): Result
     suspend fun getEvent(eventID: Int): Pair<Result, Event?>
-    suspend fun getUserEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
-    suspend fun getInFavouritesEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
-    suspend fun getParticipantEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
-    suspend fun getOrganizerEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
-    suspend fun getOriginatorEvents(id: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
+    suspend fun getUserEvents(userID: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
+    suspend fun getInFavouritesEvents(userID: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
+    suspend fun getParticipantEvents(userID: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
+    suspend fun getOrganizerEvents(userID: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
+    suspend fun getOriginatorEvents(userID: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
     suspend fun changeUserAsParticipant(changingID: Int, eventID: Int, changerID: Int): Pair<Result, Long?>
     suspend fun changeUserAsOrganizer(changerID: Int, organizer: EventOrganizer): Result
     suspend fun changeEventInFavourites(userID: Int, eventID: Int): Result

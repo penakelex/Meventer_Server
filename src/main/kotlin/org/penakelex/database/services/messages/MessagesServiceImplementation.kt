@@ -50,7 +50,7 @@ class MessagesServiceImplementation : TableService(), MessagesService {
         return@databaseQuery Result.OK to messagesQuery.map {
             val messageID = it[Messages.id].value
             Message(
-                id = messageID,
+                messageID = messageID,
                 chatID = chatID,
                 senderID = it[Messages.sender_id],
                 body = it[Messages.body],
@@ -62,7 +62,7 @@ class MessagesServiceImplementation : TableService(), MessagesService {
 
     override suspend fun updateMessage(message: MessageUpdate, updaterID: Int): Result = databaseQuery {
         val updatedMessagesCount = Messages.update(
-            where = { Messages.id.eq(message.id) and Messages.sender_id.eq(updaterID) }
+            where = { Messages.id.eq(message.messageID) and Messages.sender_id.eq(updaterID) }
         ) {
             it[body] = message.body
         }
@@ -79,7 +79,7 @@ class MessagesServiceImplementation : TableService(), MessagesService {
         if (deletedMessagesCount != 1) {
             return@databaseQuery Result.MESSAGE_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT to null
         }
-        val attachment = MessagesAttachments.select {
+        val attachment = MessagesAttachments.slice(MessagesAttachments.attachment).select {
             MessagesAttachments.message_id.eq(messageID)
         }.singleOrNull()?.let {
             it[MessagesAttachments.attachment]

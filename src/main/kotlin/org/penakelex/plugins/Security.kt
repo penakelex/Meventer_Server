@@ -32,12 +32,12 @@ fun Application.configureSecurity() {
                 val isTokenNotValid = service.sessionsService.checkSession(
                     userID = jwtCredential.payload.getClaim(USER_ID).asInt()
                         ?: return@validate null,
-                    sessionID = jwtCredential.payload.getClaim(SESSION_ID).asString()?.decipher()?.toInt()
-                        ?: return@validate null,
+                    sessionID = jwtCredential.payload.getClaim(SESSION_ID)
+                        .asString()?.decipher()?.toInt() ?: return@validate null,
                     endOfValidity = jwtCredential.payload.expiresAt.time
                 ) != Result.OK
-                if (isTokenNotValid) return@validate null
-                return@validate JWTPrincipal(jwtCredential.payload)
+                if (isTokenNotValid) null
+                else JWTPrincipal(jwtCredential.payload)
             }
             challenge { _, _ ->
                 call.response.status(Result.TOKEN_IS_NOT_VALID_OR_EXPIRED.toHttpStatusCode())

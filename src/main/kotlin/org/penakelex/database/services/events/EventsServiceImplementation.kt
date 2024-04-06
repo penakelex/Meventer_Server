@@ -48,11 +48,11 @@ class EventsServiceImplementation : TableService(), EventsService {
         newImages: List<String>
     ): Result = databaseQuery {
         val organizersIDs = EventsOrganizers.slice(EventsOrganizers.organizer_id).select {
-            EventsOrganizers.event_id.eq(event.id)
+            EventsOrganizers.event_id.eq(event.eventID)
         }.map { it[EventsOrganizers.organizer_id] }
         if (organizerID !in organizersIDs) {
             val originatorID = Events.slice(Events.originator).select {
-                Events.id.eq(event.id)
+                Events.id.eq(event.eventID)
             }.singleOrNull()?.let {
                 it[Events.originator]
             } ?: return@databaseQuery Result.EVENT_WITH_SUCH_ID_NOT_FOUND
@@ -61,7 +61,7 @@ class EventsServiceImplementation : TableService(), EventsService {
             }
         }
         Events.update(
-            where = { Events.id.eq(event.id) }
+            where = { Events.id.eq(event.eventID) }
         ) {
             if (event.name != null) it[name] = event.name
             if (event.description != null) it[description] = event.description
@@ -76,13 +76,13 @@ class EventsServiceImplementation : TableService(), EventsService {
         }
         if (!event.tags.isNullOrEmpty()) updateEventTags(
             tags = event.tags,
-            eventID = event.id
+            eventID = event.eventID
         )
         if (!event.deletedImages.isNullOrEmpty()) EventsImages.deleteWhere {
-            image.inList(event.deletedImages) and event_id.eq(event.id)
+            image.inList(event.deletedImages) and event_id.eq(event.eventID)
         }
         if (newImages.isNotEmpty()) EventsImages.batchInsert(newImages) { image ->
-            this[EventsImages.event_id] = event.id
+            this[EventsImages.event_id] = event.eventID
             this[EventsImages.image] = image
         }
         return@databaseQuery Result.OK
@@ -122,99 +122,109 @@ class EventsServiceImplementation : TableService(), EventsService {
     }
 
     override suspend fun getUserEvents(
-        id: Int,
+        userID: Int,
         actual: Boolean,
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
+        val isUserExists = Users.select { Users.id.eq(userID) }.singleOrNull() != null
+        if (!isUserExists) {
+            return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        }
         val participantEvents = EventsParticipants.slice(EventsParticipants.event_id).select {
-            EventsParticipants.participant_id.eq(id)
+            EventsParticipants.participant_id.eq(userID)
         }.map { it[EventsParticipants.event_id] }
         val organizerEvents = EventsOrganizers.slice(EventsOrganizers.event_id).select {
-            EventsOrganizers.organizer_id.eq(id)
+            EventsOrganizers.organizer_id.eq(userID)
         }.map { it[EventsOrganizers.event_id] }
         val inFavouritesEvents = EventsInFavourites.slice(EventsInFavourites.event_id).select {
-            EventsInFavourites.user_favourite_id.eq(id)
+            EventsInFavourites.user_favourite_id.eq(userID)
         }.map { it[EventsInFavourites.event_id] }
         val eventsIDs = participantEvents.union(organizerEvents.toSet()).union(inFavouritesEvents.toSet()).toList()
         val events = getEvents(
             eventsIDs = eventsIDs,
-            expression = Events.id.inList(eventsIDs) or Events.originator.eq(id),
+            expression = Events.id.inList(eventsIDs) or Events.originator.eq(userID),
             actual = actual,
             aforetime = aforetime
         )
-        return@databaseQuery if (events.isEmpty()) {
-            Result.EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
-        } else Result.OK to events
+        return@databaseQuery Result.OK to events
     }
 
     override suspend fun getInFavouritesEvents(
-        id: Int,
+        userID: Int,
         actual: Boolean,
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
+        val isUserExists = Users.select { Users.id.eq(userID) }.singleOrNull() != null
+        if (!isUserExists) {
+            return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        }
         val events = getEvents(
             eventsIDs = EventsInFavourites.slice(EventsInFavourites.event_id).select {
-                EventsInFavourites.user_favourite_id.eq(id)
+                EventsInFavourites.user_favourite_id.eq(userID)
             }.map { it[EventsInFavourites.event_id] },
             actual = actual,
             aforetime = aforetime
         )
-        return@databaseQuery if (events.isEmpty()) {
-            Result.FEATURED_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
-        } else Result.OK to events
+        return@databaseQuery Result.OK to events
     }
 
     override suspend fun getParticipantEvents(
-        id: Int,
+        userID: Int,
         actual: Boolean,
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
+        val isUserExists = Users.select { Users.id.eq(userID) }.singleOrNull() != null
+        if (!isUserExists) {
+            return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        }
         val events = getEvents(
             eventsIDs = EventsParticipants.slice(EventsParticipants.event_id).select {
-                EventsParticipants.participant_id.eq(id)
+                EventsParticipants.participant_id.eq(userID)
             }.map { it[EventsParticipants.event_id] },
             actual = actual,
             aforetime = aforetime
         )
-        return@databaseQuery if (events.isEmpty()) {
-            Result.PARTICIPANT_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
-        } else Result.OK to events
+        return@databaseQuery Result.OK to events
     }
 
     override suspend fun getOrganizerEvents(
-        id: Int,
+        userID: Int,
         actual: Boolean,
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
+        val isUserExists = Users.select { Users.id.eq(userID) }.singleOrNull() != null
+        if (!isUserExists) {
+            return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        }
         val events = getEvents(
             eventsIDs = EventsOrganizers.slice(EventsOrganizers.event_id).select {
-                EventsOrganizers.organizer_id.eq(id)
+                EventsOrganizers.organizer_id.eq(userID)
             }.map { it[EventsOrganizers.event_id] },
             actual = actual,
             aforetime = aforetime
         )
-        return@databaseQuery if (events.isEmpty()) {
-            Result.ORGANIZER_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
-        } else Result.OK to events
+        return@databaseQuery Result.OK to events
     }
 
     override suspend fun getOriginatorEvents(
-        id: Int,
+        userID: Int,
         actual: Boolean,
         aforetime: Boolean
     ): Pair<Result, List<Event>?> = databaseQuery {
+        val isUserExists = Users.select { Users.id.eq(userID) }.singleOrNull() != null
+        if (!isUserExists) {
+            return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        }
         val events = getEvents(
             events = Events.select {
                 getTimeExpression(
-                    expression = Events.originator.eq(id),
+                    expression = Events.originator.eq(userID),
                     actual = actual,
                     aforetime = aforetime
                 )
             }.orderBy(Events.start_time to SortOrder.ASC).toList()
         )
-        return@databaseQuery if (events.isEmpty()) {
-            Result.ORGANIZER_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
-        } else Result.OK to events
+        return@databaseQuery Result.OK to events
     }
 
     override suspend fun changeUserAsParticipant(
@@ -262,12 +272,14 @@ class EventsServiceImplementation : TableService(), EventsService {
         }.singleOrNull() != null
         if (isUserAlreadyParticipant) {
             EventsParticipants.deleteWhere { event_id.eq(eventID) and participant_id.eq(changingID) }
-            if (isChangingUserOrganizer) EventsOrganizers.deleteWhere {
-                event_id.eq(eventID) and organizer_id.eq(changingID)
+        } else {
+            EventsParticipants.insert {
+                it[event_id] = eventID
+                it[participant_id] = changingID
             }
-        } else EventsParticipants.insert {
-            it[event_id] = eventID
-            it[participant_id] = changingID
+            if (isChangingUserOrganizer) EventsOrganizers.deleteWhere {
+                organizer_id.eq(changingID) and event_id.eq(eventID)
+            }
         }
         return@databaseQuery Result.OK to chatID
     }
@@ -354,6 +366,7 @@ class EventsServiceImplementation : TableService(), EventsService {
         actual: Boolean = false,
         aforetime: Boolean = false
     ): List<Event> {
+        if (eventsIDs.isEmpty()) return listOf()
         val events = Events.select {
             getTimeExpression(
                 expression = expression,
@@ -380,6 +393,7 @@ class EventsServiceImplementation : TableService(), EventsService {
     }
 
     private fun getEvents(events: List<ResultRow>): List<Event> {
+        if (events.isEmpty()) return listOf()
         val eventsIDs = events.map { it[Events.id].value }
         val images = getImages(eventsIDs)
         val tags = getTags(eventsIDs)
@@ -417,7 +431,7 @@ class EventsServiceImplementation : TableService(), EventsService {
             EventsInFavourites.event_id.eq(eventID)
         }.map { it[EventsInFavourites.user_favourite_id] }
         return Event(
-            id = eventID,
+            eventID = eventID,
             name = eventResultRow[Events.name],
             images = images,
             description = eventResultRow[Events.description],
@@ -442,28 +456,25 @@ class EventsServiceImplementation : TableService(), EventsService {
         participants: Map<Int, List<Int>>,
         inFavourites: Map<Int, List<Int>>
     ): Event = Event(
-        id = eventID,
+        eventID = eventID,
         name = eventResultRow[Events.name],
-        images = images[eventID]!!,
+        images = images[eventID] ?: listOf(),
         description = eventResultRow[Events.description],
         startTime = eventResultRow[Events.start_time],
         minimalAge = eventResultRow[Events.minimal_age],
         maximalAge = eventResultRow[Events.maximal_age],
         price = eventResultRow[Events.price],
         originator = eventResultRow[Events.originator],
-        organizers = organizers[eventID]!!,
-        participants = participants[eventID]!!,
-        inFavourites = inFavourites[eventID]!!,
-        tags = tags[eventID]!!
+        organizers = organizers[eventID] ?: listOf(),
+        participants = participants[eventID] ?: listOf(),
+        inFavourites = inFavourites[eventID] ?: listOf(),
+        tags = tags[eventID] ?: listOf()
     )
 
-    private fun getImages(eventsIDs: List<Int>? = null): Map<Int, List<String>> {
-        val images = (
-                if (eventsIDs == null) EventsImages.selectAll()
-                else EventsImages.select { EventsImages.event_id.inList(eventsIDs) }
-                ).map {
-                it[EventsImages.event_id] to it[EventsImages.image]
-            }
+    private fun getImages(eventsIDs: List<Int>): Map<Int, List<String>> {
+        val images = EventsImages.select { EventsImages.event_id.inList(eventsIDs) }.map {
+            it[EventsImages.event_id] to it[EventsImages.image]
+        }
         return buildMap {
             for ((eventID, image) in images) set(
                 key = eventID,

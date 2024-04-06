@@ -14,14 +14,19 @@ class FilesControllerImplementation(
 ) : FilesController {
     override suspend fun insertFile(call: ApplicationCall) {
         val fileName = fileManager.uploadFile(
-            fileBytes = call.receive<ByteArray>()
+            fileBytes = call.receive<ByteArray>(),
+            contentType = call.request.header(HttpHeaders.ContentType)
+                ?: return call.respond(
+                    Result.EMPTY_CONTENT_TYPE.toHttpStatusCode(),
+                    ""
+                )
         )
         val result = if (fileName != null) Result.OK
         else Result.CAN_NOT_CREATE_FILE_FROM_GIVEN_BYTES
         call.respond(
             result.toHttpStatusCode(),
             fileName,
-            typeInfo<String>()
+            typeInfo<String?>()
         )
     }
 

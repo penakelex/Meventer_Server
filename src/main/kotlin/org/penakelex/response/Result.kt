@@ -42,25 +42,9 @@ enum class Result(
         HttpStatusCode.OK.value,
         "Verification code sending started"
     ),
-    EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value,
-        "Events for user with such ID not found"
-    ),
     EMPTY_FORM_ITEM_OF_MULTI_PART_DATA(
         HttpStatusCode.ExpectationFailed.value,
         "Empty form item of multi part data"
-    ),
-    FEATURED_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value,
-        "Featured events for user with such ID not found"
-    ),
-    ORGANIZER_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value,
-        "Events where user with such ID is organizer not found"
-    ),
-    PARTICIPANT_EVENTS_FOR_USER_WITH_SUCH_ID_NOT_FOUND(
-        HttpStatusCode.NoContent.value,
-        "Events where user with such ID is participant not found"
     ),
     UNRESOLVED_EVENT_TYPE(
         HttpStatusCode.Conflict.value,
@@ -173,5 +157,13 @@ enum class Result(
     SESSION_INVALID(
         HttpStatusCode.ExpectationFailed.value,
         "Session invalid"
+    ),
+    EMPTY_CONTENT_TYPE(
+        HttpStatusCode.ExpectationFailed.value,
+        "Empty content type"
+    ),
+    YOU_CAN_NOT_JOIN_A_CLOSED_CHAT_YOURSELF(
+        HttpStatusCode.Forbidden.value,
+        "You can`t join a closed chat yourself"
     )
 }

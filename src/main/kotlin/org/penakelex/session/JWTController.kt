@@ -36,5 +36,5 @@ class JWTController {
      * */
     fun getAlgorithm(secret: String): Algorithm = Algorithm.HMAC512(secret)
 
-    fun getExpirationTime() = System.currentTimeMillis() + One_Year_In_Millis
+    fun getExpirationTime() = (System.currentTimeMillis() + One_Year_In_Millis) / 1000 * 1000
 }

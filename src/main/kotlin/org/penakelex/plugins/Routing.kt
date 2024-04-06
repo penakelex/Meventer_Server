@@ -22,8 +22,6 @@ fun Application.configureRouting() {
     }
 }
 
-fun Route.greetingRoute() {
-    get {
-        call.respond(HttpStatusCode.OK, "Hello There! - Meventer")
-    }
+private fun Route.greetingRoute() = get {
+    call.respond(HttpStatusCode.OK, "Hello There! - Meventer")
 }

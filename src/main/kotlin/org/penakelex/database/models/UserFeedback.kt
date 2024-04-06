@@ -23,7 +23,7 @@ data class UserFeedbackCreate(
  * */
 @Serializable
 data class UserFeedback(
-    val id: Long,
+    val feedbackID: Long,
     val fromUserID: Int,
     val rating: Float,
     val comment: String
@@ -31,7 +31,7 @@ data class UserFeedback(
 
 @Serializable
 data class UserFeedbackUpdate(
-    val id: Long,
+    val feedbackID: Long,
     val rating: Float,
     val comment: String
 )
