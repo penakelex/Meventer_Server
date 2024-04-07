@@ -35,14 +35,4 @@ interface UsersService {
      * else [Result.OK] to user ID from database
      * */
     suspend fun isEmailAndPasswordCorrect(user: UserLogin): Pair<Result, Int?>
-
-    /**
-     * Checks the validity of the token by checking id and password
-     * @param userID user id from token
-     * @param password user password from token
-     * @return [Result.NO_USER_WITH_SUCH_ID] if user with such id doesn`t exists
-     * [Result.USER_PASSWORD_DOES_NOT_MATCH] if password doesn`t match password from database
-     * else [Result.OK] if everything is fine
-     * */
-    suspend fun isTokenValid(userID: Int, password: String): Result
 }

@@ -458,17 +458,17 @@ class EventsServiceImplementation : TableService(), EventsService {
     ): Event = Event(
         eventID = eventID,
         name = eventResultRow[Events.name],
-        images = images[eventID] ?: listOf(),
+        images = images.getOrDefault(eventID, listOf()),
         description = eventResultRow[Events.description],
         startTime = eventResultRow[Events.start_time],
         minimalAge = eventResultRow[Events.minimal_age],
         maximalAge = eventResultRow[Events.maximal_age],
         price = eventResultRow[Events.price],
         originator = eventResultRow[Events.originator],
-        organizers = organizers[eventID] ?: listOf(),
-        participants = participants[eventID] ?: listOf(),
-        inFavourites = inFavourites[eventID] ?: listOf(),
-        tags = tags[eventID] ?: listOf()
+        organizers = organizers.getOrDefault(eventID, listOf()),
+        participants = participants.getOrDefault(eventID, listOf()),
+        inFavourites = inFavourites.getOrDefault(eventID, listOf()),
+        tags = tags.getOrDefault(eventID, listOf())
     )
 
     private fun getImages(eventsIDs: List<Int>): Map<Int, List<String>> {

@@ -8,7 +8,7 @@ import org.jetbrains.exposed.sql.ReferenceOption
  * */
 object UsersFeedback : LongIdTable("users_feedback") {
     val to_user_id = integer("to_user_id").references(Users.id, onDelete = ReferenceOption.CASCADE)
-    val from_user_id = integer("from_user_id").references(Users.id)
+    val from_user_id = integer("from_user_id").references(Users.id, onDelete = ReferenceOption.CASCADE)
     val rating = float("rating")
     val comment = text("comment")
 }

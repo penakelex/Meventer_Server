@@ -8,7 +8,6 @@ import org.penakelex.database.models.*
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Users
 import org.penakelex.ecnryption.cipher
-import org.penakelex.ecnryption.decipher
 import org.penakelex.response.Result
 import java.util.*
 
@@ -155,17 +154,5 @@ class UsersServiceImplementation(
             return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH to null
         }
         return@databaseQuery Result.OK to id.value
-    }
-
-    override suspend fun isTokenValid(userID: Int, password: String): Result = databaseQuery {
-        val userPasswordFromDatabase = Users.slice(Users.password).select {
-            Users.id.eq(userID)
-        }.singleOrNull()?.let {
-            it[Users.password]
-        } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID
-        if (userPasswordFromDatabase.decipher() != password) {
-            return@databaseQuery Result.USER_PASSWORD_DOES_NOT_MATCH
-        }
-        return@databaseQuery Result.OK
     }
 }

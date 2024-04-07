@@ -149,6 +149,10 @@ class EventsControllerImplementation(
         val (result, events) = service.eventsService.getGlobalEvents(
             selection = call.receive<EventSelection>()
         )
-        call.respond(result.toHttpStatusCode(), events, typeInfo<List<Event>?>())
+        call.respond(
+            result.toHttpStatusCode(),
+            events,
+            typeInfo<List<Event>?>()
+        )
     }
 }

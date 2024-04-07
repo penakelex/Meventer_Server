@@ -160,7 +160,7 @@ class ChatsServiceImplementation : TableService(), ChatsService {
                     ),
                     originator = null,
                     participants = listOf(first, second),
-                    administrators = administrators.getOrDefault(dialogID, listOf()),
+                    administrators = null,
                     lastMessages = lastMessages.getOrDefault(dialogID, listOf())
                 )
             }

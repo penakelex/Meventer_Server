@@ -24,6 +24,6 @@ fun Route.userRoutes(controller: UsersController) = route("/user") {
             post("/update") { controller.updateFeedback(call) }
             post("/delete") { controller.deleteFeedback(call) }
         }
-        post("/logOut") { controller.logOut(call) }
+        post("/logout") { controller.logOut(call) }
     }
 }
