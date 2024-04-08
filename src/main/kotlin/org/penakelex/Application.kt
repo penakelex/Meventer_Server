@@ -48,8 +48,7 @@ private fun ApplicationEngineEnvironmentBuilder.connectSsl() {
                 .getString().toCharArray()
         }
     ) {
-        port = config.property("ktor.deployment.sslPort")
-            .getString().toInt()
-        host = config.property("ktor.deployment.host").getString()
+        port = config.port
+        host = config.host
     }
 }
