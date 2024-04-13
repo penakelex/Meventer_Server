@@ -1,7 +1,6 @@
 package org.penakelex.database.services.chats
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -9,11 +8,13 @@ import org.penakelex.database.models.*
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.*
 import org.penakelex.response.Result
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
 
 class ChatsServiceImplementation : TableService(), ChatsService {
     private lateinit var newID: AtomicLong
+
     override suspend fun createChat(
         originatorID: Int,
         chat: ChatCreate,
@@ -80,36 +81,46 @@ class ChatsServiceImplementation : TableService(), ChatsService {
             Dialogs.id.eq(chatID)
         }.singleOrNull()
         if (!isChatExists && dialog == null) return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND to null
-        val participants = if (isChatExists) ChatsParticipants.slice(ChatsParticipants.participant_id).select {
-            ChatsParticipants.chat_id.eq(chatID)
-        }.map { it[ChatsParticipants.participant_id] }
+        val participants = if (isChatExists) ChatsParticipants
+            .slice(ChatsParticipants.participant_id).select {
+                ChatsParticipants.chat_id.eq(chatID)
+            }.map { it[ChatsParticipants.participant_id] }
         else listOf(dialog!![Dialogs.first], dialog[Dialogs.second])
         return@databaseQuery Result.OK to participants
     }
 
     override suspend fun getAllChats(userID: Int): Pair<Result, List<Chat>?> = databaseQuery {
-        val chatsIDs = ChatsParticipants.slice(ChatsParticipants.chat_id).select {
-            ChatsParticipants.participant_id.eq(userID)
-        }.map { it[ChatsParticipants.chat_id] }
+        val chatsIDs = ChatsParticipants
+            .slice(ChatsParticipants.chat_id).select {
+                ChatsParticipants.participant_id.eq(userID)
+            }.map { it[ChatsParticipants.chat_id] }
         val chats = Chats.select {
             Chats.id.inList(chatsIDs)
         }.toList()
         val dialogs = Dialogs.select {
             Dialogs.first.eq(userID) or Dialogs.second.eq(userID)
         }.toList()
-        val dialogsUsers = Users.slice(Users.id, Users.name).select {
-            Users.id.inList(
-                buildSet {
-                    for (dialog in dialogs) {
-                        add(dialog[Dialogs.first])
-                        add(dialog[Dialogs.second])
-                    }
-                }.minus(userID)
-            )
-        }.associate { it[Users.id].value to it[Users.name] }
+        val dialogsUsers = Users
+            .slice(Users.id, Users.name).select {
+                Users.id.inList(
+                    buildSet {
+                        for (dialog in dialogs) {
+                            add(dialog[Dialogs.first])
+                            add(dialog[Dialogs.second])
+                        }
+                    }.minus(userID)
+                )
+            }.associate { it[Users.id].value to it[Users.name] }
         val chatsLastMessages = Messages.select {
             Messages.chat_id.inList(chatsIDs.plus(dialogs.map { it[Dialogs.id] }))
-        }.toList()
+        }.orderBy(Messages.timestamp to SortOrder.DESC).toList()
+        val messagesSenders = Users
+            .slice(Users.id, Users.name, Users.avatar).select {
+                Users.id.inList(chatsLastMessages.map { it[Messages.sender_id] })
+            }.associateBy(
+                keySelector = { it[Users.id].value },
+                valueTransform = { it[Users.name] to it[Users.avatar] }
+            )
         val messagesAttachments = MessagesAttachments.select {
             MessagesAttachments.message_id.inList(chatsLastMessages.map { it[Messages.id].value })
         }.associateBy(
@@ -119,17 +130,24 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         val lastMessages = buildMap<Long, List<Message>> {
             for (chatMessage in chatsLastMessages) {
                 val chatID = chatMessage[Messages.chat_id]
-                val message = Message(
-                    messageID = chatMessage[Messages.id].value,
-                    chatID = chatID,
-                    senderID = chatMessage[Messages.sender_id],
-                    body = chatMessage[Messages.body],
-                    timestamp = chatMessage[Messages.timestamp],
-                    attachment = messagesAttachments[chatMessage[Messages.id].value]
-                )
+                val lastMessages = getOrDefault(chatID, listOf())
+                if (lastMessages.size > 3) continue
+                val senderID = chatMessage[Messages.sender_id]
+                val (senderName, senderAvatar) = messagesSenders.getValue(senderID)
                 set(
                     key = chatID,
-                    value = get(chatID)?.plus(message) ?: listOf(message)
+                    value = lastMessages.plus(
+                        Message(
+                            messageID = chatMessage[Messages.id].value,
+                            chatID = chatID,
+                            senderID = senderID,
+                            senderName = senderName,
+                            senderAvatar = senderAvatar,
+                            body = chatMessage[Messages.body],
+                            timestamp = chatMessage[Messages.timestamp],
+                            attachment = messagesAttachments[chatMessage[Messages.id].value]
+                        )
+                    )
                 )
             }
         }
@@ -154,17 +172,16 @@ class ChatsServiceImplementation : TableService(), ChatsService {
                 val companionID = if (first != userID) first else second
                 Chat(
                     chatID = dialogID,
-                    name = dialogsUsers.getOrDefault(
-                        companionID,
-                        ""
-                    ),
+                    name = dialogsUsers.getOrDefault(companionID, ""),
                     originator = null,
                     participants = listOf(first, second),
                     administrators = null,
                     lastMessages = lastMessages.getOrDefault(dialogID, listOf())
                 )
             }
-        )
+        ).sortedByDescending { chat ->
+            chat.lastMessages.lastOrNull()?.timestamp ?: Instant.MIN
+        }
     }
 
     override suspend fun changeUserAsParticipant(chatID: Long, userID: Int, changerID: Int?): Result = databaseQuery {
@@ -249,11 +266,12 @@ class ChatsServiceImplementation : TableService(), ChatsService {
     }
 
     override suspend fun updateChatName(chat: ChatNameUpdate, userID: Int): Result = databaseQuery {
-        val originator = Chats.slice(Chats.originator).select {
-            Chats.id.eq(chat.chatID)
-        }.singleOrNull()?.let {
-            it[Chats.originator]
-        } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
+        val originator = Chats
+            .slice(Chats.originator).select {
+                Chats.id.eq(chat.chatID)
+            }.singleOrNull()?.let {
+                it[Chats.originator]
+            } ?: return@databaseQuery Result.CHAT_WITH_SUCH_ID_NOT_FOUND
         if (originator != userID) {
             return@databaseQuery Result.YOU_CAN_NOT_MANAGE_THIS_CHAT
         }
@@ -275,23 +293,25 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         return@databaseQuery Result.OK
     }
 
-    private fun setID() = CoroutineScope(Dispatchers.IO).launch {
-        databaseQuery {
-            val chatsMaximalID = Chats.slice(Chats.id).selectAll()
-                .orderBy(Chats.id to SortOrder.DESC)
-                .limit(1)
-                .singleOrNull()
-            val dialogsMaximalID = Dialogs.slice(Dialogs.id).selectAll()
-                .orderBy(Dialogs.id to SortOrder.DESC)
-                .limit(1)
-                .singleOrNull()
-            val id = if (chatsMaximalID != null && dialogsMaximalID != null) max(
-                dialogsMaximalID[Dialogs.id], chatsMaximalID[Chats.id]
-            )
-            else if (chatsMaximalID == null && dialogsMaximalID != null) dialogsMaximalID[Dialogs.id]
-            else if (chatsMaximalID != null) chatsMaximalID[Chats.id]
-            else 1L
-            newID = AtomicLong(id + 1)
+    private suspend fun setID() = coroutineScope {
+        launch {
+            databaseQuery {
+                val chatsMaximalID = Chats.slice(Chats.id).selectAll()
+                    .orderBy(Chats.id to SortOrder.DESC)
+                    .limit(1)
+                    .singleOrNull()
+                val dialogsMaximalID = Dialogs.slice(Dialogs.id).selectAll()
+                    .orderBy(Dialogs.id to SortOrder.DESC)
+                    .limit(1)
+                    .singleOrNull()
+                val id = if (chatsMaximalID != null && dialogsMaximalID != null) max(
+                    dialogsMaximalID[Dialogs.id], chatsMaximalID[Chats.id]
+                )
+                else if (chatsMaximalID == null && dialogsMaximalID != null) dialogsMaximalID[Dialogs.id]
+                else if (chatsMaximalID != null) chatsMaximalID[Chats.id]
+                else 1L
+                newID = AtomicLong(id + 1)
+            }
         }
     }
 

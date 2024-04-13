@@ -9,6 +9,7 @@ import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.ChatsParticipants
 import org.penakelex.database.tables.Messages
 import org.penakelex.database.tables.MessagesAttachments
+import org.penakelex.database.tables.Users
 import org.penakelex.response.Result
 
 class MessagesServiceImplementation : TableService(), MessagesService {
@@ -38,21 +39,32 @@ class MessagesServiceImplementation : TableService(), MessagesService {
     }
 
     override suspend fun getAllMessages(chatID: Long): Pair<Result, List<Message>?> = databaseQuery {
-        val messagesQuery = Messages.select {
+        val messages = Messages.select {
             Messages.chat_id.eq(chatID)
         }.toList()
+        val messagesSenders = Users
+            .slice(Users.id, Users.name, Users.avatar).select {
+                Users.id.inList(messages.map { it[Messages.sender_id] })
+            }.associateBy(
+                keySelector = { it[Users.id].value },
+                valueTransform = { it[Users.name] to it[Users.avatar] }
+            )
         val messagesAttachments = MessagesAttachments.select {
-            MessagesAttachments.message_id.inList(messagesQuery.map { it[Messages.id].value })
+            MessagesAttachments.message_id.inList(messages.map { it[Messages.id].value })
         }.associateBy(
             keySelector = { it[MessagesAttachments.message_id] },
             valueTransform = { it[MessagesAttachments.attachment] }
         )
-        return@databaseQuery Result.OK to messagesQuery.map {
+        return@databaseQuery Result.OK to messages.map {
             val messageID = it[Messages.id].value
+            val senderID = it[Messages.sender_id]
+            val (senderName, senderAvatar) = messagesSenders.getValue(senderID)
             Message(
                 messageID = messageID,
                 chatID = chatID,
-                senderID = it[Messages.sender_id],
+                senderID = senderID,
+                senderName = senderName,
+                senderAvatar = senderAvatar,
                 body = it[Messages.body],
                 timestamp = it[Messages.timestamp],
                 attachment = messagesAttachments[messageID]

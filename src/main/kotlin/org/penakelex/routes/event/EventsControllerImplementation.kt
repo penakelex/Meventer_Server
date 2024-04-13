@@ -62,12 +62,22 @@ class EventsControllerImplementation(
         fileManager.deleteFiles(event.deletedImages)
     }
 
-    override suspend fun deleteEvent(call: ApplicationCall) = call.response.status(
-        service.eventsService.deleteEvent(
+    override suspend fun deleteEvent(call: ApplicationCall) {
+        val userID = call.getIntJWTPrincipalClaim(USER_ID)
+        val (deletionResult, chatID) = service.eventsService.deleteEvent(
             eventID = call.receive<Int>(),
-            originatorID = call.getIntJWTPrincipalClaim(USER_ID)
-        ).toHttpStatusCode()
-    )
+            originatorID = userID
+        )
+        if (deletionResult != Result.OK) return call.response.status(
+            deletionResult.toHttpStatusCode()
+        )
+        call.response.status(
+            service.chatsService.deleteChat(
+                chatID = chatID!!,
+                userID = userID
+            ).toHttpStatusCode()
+        )
+    }
 
     override suspend fun getEvent(call: ApplicationCall) {
         val (result, event) = service.eventsService.getEvent(

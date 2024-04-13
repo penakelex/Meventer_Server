@@ -6,7 +6,7 @@ import org.penakelex.response.Result
 interface EventsService {
     suspend fun insertEvent(event: EventCreate, originatorID: Int, images: List<String>, chatID: Long): Result
     suspend fun updateEvent(event: EventUpdate, organizerID: Int, newImages: List<String>): Result
-    suspend fun deleteEvent(eventID: Int, originatorID: Int): Result
+    suspend fun deleteEvent(eventID: Int, originatorID: Int): Pair<Result, Long?>
     suspend fun getEvent(eventID: Int): Pair<Result, Event?>
     suspend fun getUserEvents(userID: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>
     suspend fun getInFavouritesEvents(userID: Int, actual: Boolean, aforetime: Boolean): Pair<Result, List<Event>?>

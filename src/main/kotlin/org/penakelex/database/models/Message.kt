@@ -19,6 +19,8 @@ data class Message(
     val messageID: Long,
     val chatID: Long,
     val senderID: Int,
+    val senderName: String,
+    val senderAvatar: String,
     val body: String,
     val timestamp: Instant,
     val attachment: String?

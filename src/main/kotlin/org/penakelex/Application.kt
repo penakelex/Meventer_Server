@@ -19,7 +19,7 @@ fun main() {
     ).start(wait = true)
 }
 
-fun Application.module() {
+private fun Application.module() {
     configureDI()
     configureSockets()
     configureSerialization()

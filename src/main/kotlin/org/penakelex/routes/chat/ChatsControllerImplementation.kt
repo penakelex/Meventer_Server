@@ -107,6 +107,9 @@ class ChatsControllerImplementation(
             senderID = senderID, message = sentMessage
         )
         if (messageInsertResult != Result.OK) return
+        val (gettingNameAndAvatarResult, senderNameAndAvatar) =
+            service.usersService.getUserNameAndAvatar(userID = senderID)
+        if (gettingNameAndAvatarResult != Result.OK) return
         sendToClients(
             chatParticipants = chatParticipants!!.toSet(),
             message = Json.encodeToString(
@@ -115,6 +118,8 @@ class ChatsControllerImplementation(
                     messageID = messageID!!,
                     chatID = sentMessage.chatID,
                     senderID = senderID,
+                    senderName = senderNameAndAvatar!!.first,
+                    senderAvatar = senderNameAndAvatar.second,
                     body = sentMessage.body,
                     timestamp = sentMessage.timestamp,
                     attachment = sentMessage.attachment

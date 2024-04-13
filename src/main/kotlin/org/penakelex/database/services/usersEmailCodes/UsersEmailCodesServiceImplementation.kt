@@ -37,11 +37,12 @@ class UsersEmailCodesServiceImplementation : UsersEmailCodesService, TableServic
     }
 
     override suspend fun verifyCode(emailCode: UserEmailCode): Result = databaseQuery {
-        val (code, expirationTime) = UsersEmailCodes.slice(UsersEmailCodes.code, UsersEmailCodes.email).select {
-            UsersEmailCodes.email.eq(emailCode.email)
-        }.singleOrNull()?.let {
-            it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
-        } ?: return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
+        val (code, expirationTime) = UsersEmailCodes
+            .slice(UsersEmailCodes.code, UsersEmailCodes.expiration_time).select {
+                UsersEmailCodes.email.eq(emailCode.email)
+            }.singleOrNull()?.let {
+                it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
+            } ?: return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
         return@databaseQuery if (code != emailCode.code
             || System.currentTimeMillis() >= expirationTime
         ) Result.VERIFICATION_CODE_IS_INCORRECT

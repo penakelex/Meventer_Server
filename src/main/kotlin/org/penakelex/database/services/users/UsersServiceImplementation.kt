@@ -89,6 +89,18 @@ class UsersServiceImplementation(
         return@databaseQuery Result.OK to userAvatar
     }
 
+    override suspend fun getUserNameAndAvatar(
+        userID: Int
+    ): Pair<Result, Pair<String, String>?> = databaseQuery {
+        val userNameAndAvatar = Users
+            .slice(Users.name, Users.avatar).select {
+                Users.id.eq(userID)
+            }.singleOrNull()?.let {
+                it[Users.name] to it[Users.avatar]
+            } ?: return@databaseQuery Result.NO_USER_WITH_SUCH_ID to null
+        return@databaseQuery Result.OK to userNameAndAvatar
+    }
+
     override suspend fun updateUserData(
         userID: Int,
         userData: UserUpdate,
@@ -104,7 +116,7 @@ class UsersServiceImplementation(
                 return@databaseQuery Result.USER_WITH_SUCH_NICKNAME_ALREADY_EXISTS
             }
         }
-        Users.update(
+        if (userData.nickname != null || userData.name != null || avatar != null) Users.update(
             where = { Users.id.eq(userID) }
         ) {
             if (userData.name != null) it[name] = userData.name

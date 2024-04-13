@@ -30,8 +30,6 @@ data class Event(
     val minimalAge: UShort,
     val maximalAge: UShort?,
     val price: Int,
-    //val place: String,
-    //val coordinates: Pair<String, String>,
     val originator: Int,
     val organizers: List<Int>,
     val participants: List<Int>,
@@ -56,8 +54,6 @@ data class EventCreate(
     val minimalAge: UShort?,
     val maximalAge: UShort?,
     val price: Int?,
-    //val place: String,
-    //val coordinates: Pair<String, String>,
     val tags: List<String>?
 )
 
@@ -131,14 +127,25 @@ data class EventUpdate(
     val minimalAge: UShort?,
     val maximalAge: UShort?,
     val price: Int?,
-    //val place: String?,
-    //val coordinates: Pair<String, String>?,
     val tags: List<String>?,
     val deletedImages: List<String>?
-)
+) {
+    fun isHavingToUpdate(): Boolean =
+        name != null || description != null
+                || startTime != null || minimalAge != null
+                || maximalAge != null || price != null
+}
 
 @Serializable
 data class EventParticipant(
     val changingID: Int?,
     val eventID: Int
+)
+
+data class EventsFields(
+    val images: Map<Int, List<String>>,
+    val tags: Map<Int, List<String>>,
+    val participants: Map<Int, List<Int>>,
+    val organizers: Map<Int, List<Int>>,
+    val inFavourites: Map<Int, List<Int>>
 )

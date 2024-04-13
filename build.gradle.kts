@@ -21,7 +21,7 @@ group = "org.penakelex"
 version = "0.0.1"
 
 application {
-    mainClass.set("io.ktor.server.netty.EngineMain")
+    mainClass = "io.ktor.server.netty.EngineMain"
     applicationDefaultJvmArgs = listOf(
         "-Dio.ktor.development=${project.ext.has("development")}"
     )
