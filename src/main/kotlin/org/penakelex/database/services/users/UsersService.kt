@@ -1,22 +1,12 @@
 package org.penakelex.database.services.users
 
-import org.penakelex.database.models.User
-import org.penakelex.database.models.UserEmail
-import org.penakelex.database.models.UserLogin
-import org.penakelex.database.models.UserRegister
+import org.penakelex.database.models.*
 import org.penakelex.response.Result
 
 /**
  * Users table service
  * */
 interface UsersService {
-    /**
-     * Checks if email is taken by someone else
-     * @param userEmail email to check
-     * @return if email is free [Result.OK] else [Result.USER_WITH_SUCH_EMAIL_ALREADY_EXISTS]
-     * */
-    suspend fun checkIfEmailIsTaken(userEmail: UserEmail): Result
-
     /**
      * Inserts new user into Users table with checking if the email is free
      * @param user user data to insert
@@ -26,10 +16,17 @@ interface UsersService {
     suspend fun insertNewUser(user: UserRegister, avatar: String?): Pair<Result, Int?>
     /**
      * Gets from Users table data about user by his ID
-     * @param id user ID to get his data
+     * @param userID user ID to get his data
      * @return
      * */
-    suspend fun getUserData(id: Int): Pair<Result, User?>
+    suspend fun getUserData(userID: Int): Pair<Result, User?>
+    suspend fun getUsersByNickname(nickname: String): Pair<Result, List<UserShort>>
+    suspend fun getUserEmail(userID: Int): Pair<Result, String?>
+    suspend fun getUserAvatar(userID: Int): Pair<Result, String?>
+    suspend fun getUserNameAndAvatar(userID: Int): Pair<Result, Pair<String, String>?>
+    suspend fun updateUserData(userID: Int, userData: UserUpdate, avatar: String?): Result
+    suspend fun updateEmail(userID: Int, email: UserEmail): Result
+    suspend fun updatePassword(userID: Int, oldPassword: String, newPassword: String): Result
 
     /**
      * Checks if user email and password matches those from database
@@ -39,14 +36,4 @@ interface UsersService {
      * else [Result.OK] to user ID from database
      * */
     suspend fun isEmailAndPasswordCorrect(user: UserLogin): Pair<Result, Int?>
-
-    /**
-     * Checks the validity of the token by checking id and password
-     * @param userID user id from token
-     * @param password user password from token
-     * @return [Result.NO_USER_WITH_SUCH_ID] if user with such id doesn`t exists
-     * [Result.USER_PASSWORD_DOES_NOT_MATCH] if password doesn`t match password from database
-     * else [Result.OK] if everything is fine
-     * */
-    suspend fun isTokenValid(userID: Int, password: String): Result
 }

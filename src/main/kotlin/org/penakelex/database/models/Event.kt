@@ -9,7 +9,7 @@ import java.time.Instant
 
 /**
  * Data transfer object for event
- * @property id event ID
+ * @property eventID event ID
  * @property name event name
  * @property images list of images names
  * @property description event description
@@ -22,16 +22,19 @@ import java.time.Instant
  * */
 @Serializable
 data class Event(
-    val id: Int,
+    val eventID: Int,
     val name: String,
     val images: List<String>,
     val description: String,
     val startTime: Instant,
-    val minimalAge: Short,
-    val maximalAge: Short?,
+    val minimalAge: UShort,
+    val maximalAge: UShort?,
     val price: Int,
     val originator: Int,
-    val organizers: List<Int>
+    val organizers: List<Int>,
+    val participants: List<Int>,
+    val inFavourites: List<Int>,
+    val tags: List<String>
 )
 
 /**
@@ -48,9 +51,10 @@ data class EventCreate(
     val name: String,
     val description: String,
     val startTime: Instant,
-    val minimalAge: Short?,
-    val maximalAge: Short?,
-    val price: Int?
+    val minimalAge: UShort?,
+    val maximalAge: UShort?,
+    val price: Int?,
+    val tags: List<String>?
 )
 
 /**
@@ -64,7 +68,7 @@ data class EventCreate(
 @Serializable
 data class EventSelection(
     val tags: List<String>?,
-    val age: Short?,
+    val age: UShort?,
     val minimalPrice: Int?,
     val maximalPrice: Int?,
     val sortBy: String?
@@ -120,17 +124,28 @@ data class EventUpdate(
     val name: String?,
     val description: String?,
     val startTime: Instant?,
-    val minimalAge: Short?,
-    val maximalAge: Short?,
-    val price: Int?
+    val minimalAge: UShort?,
+    val maximalAge: UShort?,
+    val price: Int?,
+    val tags: List<String>?,
+    val deletedImages: List<String>?
+) {
+    fun isHavingToUpdate(): Boolean =
+        name != null || description != null
+                || startTime != null || minimalAge != null
+                || maximalAge != null || price != null
+}
+
+@Serializable
+data class EventParticipant(
+    val changingID: Int?,
+    val eventID: Int
 )
 
-/**
- * Data transfer object for event requirements
- * @property minimalAge minimal permitted age
- * @property maximalAge maximal permitted age
- * */
-data class EventRequirements(
-    val minimalAge: Short,
-    val maximalAge: Short?
+data class EventsFields(
+    val images: Map<Int, List<String>>,
+    val tags: Map<Int, List<String>>,
+    val participants: Map<Int, List<Int>>,
+    val organizers: Map<Int, List<Int>>,
+    val inFavourites: Map<Int, List<Int>>
 )

@@ -19,31 +19,31 @@ fun EventSelection.getSelectExpression(): Op<Boolean> {
         && maximalPrice == null
     ) return expression
     val expressions = listOfNotNull(
-        getTagsExpression(),
+        getTagsExpressionForNameAndDescription(),
         getAgeExpression(),
-        getPriceExpression()
+        getPriceExpression(),
+       // getPlaceExpression()
     )
     for (fieldExpression in expressions) expression = expression and fieldExpression
     return expression
 }
 
-private fun EventSelection.getTagsExpression(): Op<Boolean>? {
-    if (tags == null) return null
-    var expression = Events.name.iLike("%${tags.first()}%") or
-            Events.description.iLike("%${tags.first()}%")
-    for (i in 1..tags.lastIndex) {
-        expression = expression or
-                Events.name.iLike("%${tags[i]}%") or
-                Events.description.iLike("%${tags[i]}%")
-    }
+private fun EventSelection.getTagsExpressionForNameAndDescription(): Op<Boolean>? {
+    if (tags.isNullOrEmpty()) return null
+    val firstTag = tags.first()
+    var expression = Events.name.iLike("%${firstTag}%") or
+            Events.description.iLike("%${firstTag}%")
+    for (i in 1..tags.lastIndex) expression = expression or
+            Events.name.iLike("%${tags[i]}%") or
+            Events.description.iLike("%${tags[i]}%")
     return expression
 }
 
-private fun EventSelection.getAgeExpression(): Op<Boolean>? {
-    if (age == null) return null
-    return Events.minimal_age.lessEq(age) orIfNotNull
+private fun EventSelection.getAgeExpression(): Op<Boolean>? =
+    if (age == null) null
+    else Events.minimal_age.lessEq(age) orIfNotNull
             Events.maximal_age.greaterEq(age)
-}
+
 
 private fun EventSelection.getPriceExpression(): Op<Boolean>? {
     val isMaxPriceNotNull = maximalPrice != null

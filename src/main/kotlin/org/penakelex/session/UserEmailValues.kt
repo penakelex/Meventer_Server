@@ -9,11 +9,11 @@ data class UserEmailValues(
     val password: String,
     val personal: String,
     val subject: String,
-    val body: String
+    val former: String
 ) {
     /**
      * @param code generated code to verify user`s email
      * @return [String] email message body
      * */
-    fun getMessageBody(code: String) = body + code
+    fun getMessageBody(code: String) = former + code
 }

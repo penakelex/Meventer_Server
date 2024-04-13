@@ -7,25 +7,28 @@ import jakarta.mail.PasswordAuthentication
 import org.jetbrains.exposed.sql.Database
 import org.koin.dsl.module
 import org.penakelex.database.services.Service
+import org.penakelex.database.services.chats.ChatsServiceImplementation
 import org.penakelex.database.services.events.EventsServiceImplementation
+import org.penakelex.database.services.messages.MessagesServiceImplementation
+import org.penakelex.database.services.sessions.SessionsServiceImplementation
 import org.penakelex.database.services.users.UsersServiceImplementation
 import org.penakelex.database.services.usersEmailCodes.UsersEmailCodesServiceImplementation
 import org.penakelex.database.services.usersFeedback.UsersFeedbackServiceImplementation
+import org.penakelex.fileSystem.FileManager
 import org.penakelex.fileSystem.FileManagerImplementation
 import org.penakelex.routes.Controller
+import org.penakelex.routes.chat.ChatsControllerImplementation
 import org.penakelex.routes.event.EventsControllerImplementation
 import org.penakelex.routes.file.FilesControllerImplementation
 import org.penakelex.routes.user.UsersControllerImplementation
+import org.penakelex.session.JWTController
 import org.penakelex.session.JWTValues
 import org.penakelex.session.UserEmailValues
 import java.util.*
 
-/**
- * Main module for dependency injection
- * */
-val mainModule = module {
+val databaseModule = module {
     val config = HoconApplicationConfig(ConfigFactory.load())
-    single {
+    single<Database> {
         Database.connect(
             url = config.property("database.url").getString(),
             user = config.property("database.user").getString(),
@@ -33,6 +36,24 @@ val mainModule = module {
             driver = config.property("database.driver").getString()
         )
     }
+    single<Service> {
+        Service(
+            usersService = UsersServiceImplementation(
+                basicAvatar = config.property("file.basicAvatar").getString()
+            ),
+            usersEmailCodesService = UsersEmailCodesServiceImplementation(),
+            eventsService = EventsServiceImplementation(),
+            usersFeedbackService = UsersFeedbackServiceImplementation(),
+            chatsService = ChatsServiceImplementation(),
+            messagesService = MessagesServiceImplementation(),
+            sessionsService = SessionsServiceImplementation(),
+            database = get()
+        )
+    }
+}
+
+val securityModule = module {
+    val config = HoconApplicationConfig(ConfigFactory.load())
     single {
         JWTValues(
             audience = config.property("jwt.audience").getString(),
@@ -41,32 +62,33 @@ val mainModule = module {
             realm = config.property("jwt.realm").getString()
         )
     }
-    single<Service> {
-        Service(
-            usersService = UsersServiceImplementation(
-                basicAvatar = "Аватарка.jpg"
-            ),
-            usersEmailCodesService = UsersEmailCodesServiceImplementation(),
-            eventsService = EventsServiceImplementation(),
-            usersFeedbackService = UsersFeedbackServiceImplementation(),
-            database = get()
-        )
-    }
     single {
+        JWTController()
+    }
+}
+
+val emailModule = module {
+    val config = HoconApplicationConfig(ConfigFactory.load())
+    val basic = "mail.smtp"
+    val auth = "${basic}.auth"
+    val starttls = "${basic}.starttls.enable"
+    val host = "${basic}.host"
+    val port = "${basic}.port"
+    single<Properties> {
         Properties().apply {
-            set("mail.smtp.auth", "true")
-            set("mail.smtp.starttls.enable", "true")
-            set("mail.smtp.host", "smtp.gmail.com")
-            set("mail.smtp.port", "587")
+            set(auth, config.property(auth).getString())
+            set(starttls, config.property(starttls).getString())
+            set(host, config.property(host).getString())
+            set(port, config.property(port).getString())
         }
     }
-    single {
+    single<UserEmailValues> {
         UserEmailValues(
             email = config.property("email.email").getString(),
             password = config.property("email.password").getString(),
             personal = config.property("email.personal").getString(),
-            subject = "Подтверждение почты",
-            body = "Код подтверждения почты: "
+            subject = config.property("email.subject").getString(),
+            former = config.property("email.former").getString()
         )
     }
     single<Authenticator> {
@@ -76,11 +98,18 @@ val mainModule = module {
                 PasswordAuthentication(emailValues.email, emailValues.password)
         }
     }
-    single {
+}
+
+val fileSystemModule = module {
+    val config = HoconApplicationConfig(ConfigFactory.load())
+    single<FileManager> {
         FileManagerImplementation(
             directory = config.property("file.directory").getString()
         )
     }
+}
+
+val routingModule = module {
     single<Controller> {
         Controller(
             usersController = UsersControllerImplementation(
@@ -89,13 +118,18 @@ val mainModule = module {
                 properties = get(),
                 userEmailValues = get(),
                 authenticator = get(),
-                fileManager = get()
+                fileManager = get(),
+                controllerJWT = get()
             ),
             eventsController = EventsControllerImplementation(
                 service = get(),
                 fileManager = get()
             ),
             filesController = FilesControllerImplementation(
+                fileManager = get()
+            ),
+            chatsController = ChatsControllerImplementation(
+                service = get(),
                 fileManager = get()
             )
         )

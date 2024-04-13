@@ -1,8 +1,10 @@
 package org.penakelex.database.services.usersFeedback
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.penakelex.database.models.UserFeedback
 import org.penakelex.database.models.UserFeedbackCreate
+import org.penakelex.database.models.UserFeedbackUpdate
 import org.penakelex.database.services.TableService
 import org.penakelex.database.tables.Users
 import org.penakelex.database.tables.UsersFeedback
@@ -13,7 +15,7 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
         if (fromUserID == feedback.toUserID) return@databaseQuery Result.YOU_CAN_NOT_FEEDBACK_YOURSELF
         val usersCount = Users.select {
             Users.id.eq(fromUserID) or Users.id.eq(feedback.toUserID)
-        }.toList().size
+        }.count().toInt()
         if (usersCount != 2) return@databaseQuery Result.NO_USER_WITH_SUCH_ID
         val feedbackWithSameUsersID = UsersFeedback.select {
             UsersFeedback.to_user_id.eq(feedback.toUserID) and UsersFeedback.from_user_id.eq(fromUserID)
@@ -30,16 +32,39 @@ class UsersFeedbackServiceImplementation : TableService(), UsersFeedbackService 
         return@databaseQuery Result.OK
     }
 
-    override suspend fun getAllFeedbackToUser(id: Int): Pair<Result, List<UserFeedback>?> = databaseQuery {
-        val feedbacks = UsersFeedback.select { UsersFeedback.to_user_id.eq(id) }
+    override suspend fun getAllFeedbackToUser(userID: Int): Pair<Result, List<UserFeedback>?> = databaseQuery {
+        val feedbacks = UsersFeedback.select { UsersFeedback.to_user_id.eq(userID) }
             .orderBy(UsersFeedback.id to SortOrder.ASC).map {
                 UserFeedback(
+                    feedbackID = it[UsersFeedback.id].value,
                     fromUserID = it[UsersFeedback.from_user_id],
                     rating = it[UsersFeedback.rating],
                     comment = it[UsersFeedback.comment]
                 )
             }
-        if (feedbacks.isEmpty()) return@databaseQuery Result.FEEDBACKS_FOR_USER_WITH_SUCH_ID_NOT_FOUND to null
         return@databaseQuery Result.OK to feedbacks
+    }
+
+    override suspend fun updateFeedback(userID: Int, feedback: UserFeedbackUpdate): Result = databaseQuery {
+        val updatedFeedbacksCount = UsersFeedback.update(
+            where = { UsersFeedback.id.eq(feedback.feedbackID) and UsersFeedback.from_user_id.eq(userID) }
+        ) {
+            it[rating] = feedback.rating
+            it[comment] = feedback.comment
+        }
+        if (updatedFeedbacksCount != 1) {
+            return@databaseQuery Result.FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT
+        }
+        return@databaseQuery Result.OK
+    }
+
+    override suspend fun deleteFeedback(userID: Int, feedbackID: Long): Result = databaseQuery {
+        val deletedFeedbacksCount = UsersFeedback.deleteWhere {
+            UsersFeedback.id.eq(feedbackID) and from_user_id.eq(userID)
+        }
+        if (deletedFeedbacksCount != 1) {
+            return@databaseQuery Result.FEEDBACK_WITH_SUCH_ID_NOT_FOUND_OR_YOU_CAN_NOT_CHANGE_IT
+        }
+        return@databaseQuery Result.OK
     }
 }

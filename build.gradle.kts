@@ -1,4 +1,3 @@
-
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
@@ -12,14 +11,20 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
 }
 
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = "ApplicationKt"
+    }
+}
+
 group = "org.penakelex"
 version = "0.0.1"
 
 application {
-    mainClass.set("io.ktor.server.netty.EngineMain")
-
-    val isDevelopment: Boolean = project.ext.has("development")
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
+    mainClass = "io.ktor.server.netty.EngineMain"
+    applicationDefaultJvmArgs = listOf(
+        "-Dio.ktor.development=${project.ext.has("development")}"
+    )
 }
 
 repositories {
@@ -31,12 +36,10 @@ dependencies {
     implementation("io.ktor:ktor-server-websockets-jvm")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     implementation("io.ktor:ktor-server-content-negotiation-jvm")
-    implementation("io.ktor:ktor-network-tls-certificates:$ktor_version")
     implementation("org.postgresql:postgresql:$postgres_version")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposed_version")
-    implementation("io.ktor:ktor-server-sessions-jvm")
     implementation("io.ktor:ktor-server-auth-jvm")
     implementation("io.ktor:ktor-server-auth-jwt-jvm")
     implementation("io.ktor:ktor-server-netty-jvm")

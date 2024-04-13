@@ -23,7 +23,15 @@ data class UserFeedbackCreate(
  * */
 @Serializable
 data class UserFeedback(
+    val feedbackID: Long,
     val fromUserID: Int,
+    val rating: Float,
+    val comment: String
+)
+
+@Serializable
+data class UserFeedbackUpdate(
+    val feedbackID: Long,
     val rating: Float,
     val comment: String
 )

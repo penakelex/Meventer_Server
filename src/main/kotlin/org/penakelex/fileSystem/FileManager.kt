@@ -9,8 +9,8 @@ interface FileManager {
      * @param fileItems list of FileItems
      * @return list of file names
      * */
-    suspend fun uploadFile(fileItems: List<PartData.FileItem>): List<String>
-
+    suspend fun uploadFiles(fileItems: List<PartData.FileItem>): List<String>
+    suspend fun uploadFile(fileBytes: ByteArray, contentType: String): String?
     /**
      * Downloads file by the [fileName]
      * @param fileName file name to download
@@ -18,9 +18,5 @@ interface FileManager {
      * */
     suspend fun downloadFile(fileName: String): File?
 
-    /**
-     * Checks last one maximum file and gets new name
-     * @return new file name (number)
-     * */
-    suspend fun getNewFileNumber(): Long
+    suspend fun deleteFiles(fileNames: List<String>?)
 }

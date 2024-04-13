@@ -1,8 +1,10 @@
 package org.penakelex.database.services.usersEmailCodes
 
-import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.update
 import org.penakelex.database.models.UserEmail
 import org.penakelex.database.models.UserEmailCode
 import org.penakelex.database.services.TableService
@@ -11,6 +13,7 @@ import org.penakelex.response.Result
 
 
 private const val TEN_MINUTES_IN_MILLIS = 600_000
+
 /**
  * UsersEmailCodes table service implementation
  * */
@@ -34,12 +37,12 @@ class UsersEmailCodesServiceImplementation : UsersEmailCodesService, TableServic
     }
 
     override suspend fun verifyCode(emailCode: UserEmailCode): Result = databaseQuery {
-        val (code, expirationTime) = UsersEmailCodes.select {
-            UsersEmailCodes.email.eq(emailCode.email)
-        }.singleOrNull().let {
-            if (it == null) return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
-            else it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
-        }
+        val (code, expirationTime) = UsersEmailCodes
+            .slice(UsersEmailCodes.code, UsersEmailCodes.expiration_time).select {
+                UsersEmailCodes.email.eq(emailCode.email)
+            }.singleOrNull()?.let {
+                it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
+            } ?: return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
         return@databaseQuery if (code != emailCode.code
             || System.currentTimeMillis() >= expirationTime
         ) Result.VERIFICATION_CODE_IS_INCORRECT
@@ -47,24 +50,16 @@ class UsersEmailCodesServiceImplementation : UsersEmailCodesService, TableServic
     }
 
     override suspend fun verifyAndDeleteCode(email: UserEmail, code: String): Result = databaseQuery {
-        val (id, codeFromDatabase, expirationTime) = UsersEmailCodes.select {
-            UsersEmailCodes.email.eq(email)
-        }.singleOrNull().let {
-            if (it == null) return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
-            else Triple(
-                it[UsersEmailCodes.id],
-                it[UsersEmailCodes.code],
-                it[UsersEmailCodes.expiration_time]
-            )
-        }
-        UsersEmailCodes.deleteWhere { UsersEmailCodes.id.eq(id) }
+        val (codeFromDatabase, expirationTime) = UsersEmailCodes
+            .slice(UsersEmailCodes.code, UsersEmailCodes.expiration_time).select {
+                UsersEmailCodes.email.eq(email)
+            }.singleOrNull()?.let {
+                it[UsersEmailCodes.code] to it[UsersEmailCodes.expiration_time]
+            } ?: return@databaseQuery Result.VERIFICATION_CODE_IS_INCORRECT
+        UsersEmailCodes.deleteWhere { UsersEmailCodes.email.eq(email) }
         return@databaseQuery if (code != codeFromDatabase
             || expirationTime <= System.currentTimeMillis()
         ) Result.VERIFICATION_CODE_IS_INCORRECT
         else Result.OK
-    }
-
-    override suspend fun deleteExpiredCodes(): Unit = databaseQuery {
-        UsersEmailCodes.deleteWhere { expiration_time lessEq System.currentTimeMillis() }
     }
 }

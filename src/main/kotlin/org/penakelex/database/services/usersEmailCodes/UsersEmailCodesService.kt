@@ -33,9 +33,4 @@ interface UsersEmailCodesService {
      * else [Result.OK] if everything is fine
      * */
     suspend fun verifyAndDeleteCode(email: UserEmail, code: String): Result
-
-    /**
-     * Deletes expired codes from the database
-     * */
-    suspend fun deleteExpiredCodes()
 }
