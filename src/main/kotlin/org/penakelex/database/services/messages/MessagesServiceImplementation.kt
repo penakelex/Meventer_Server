@@ -6,25 +6,27 @@ import org.penakelex.database.models.Message
 import org.penakelex.database.models.MessageSend
 import org.penakelex.database.models.MessageUpdate
 import org.penakelex.database.services.TableService
-import org.penakelex.database.tables.ChatsParticipants
-import org.penakelex.database.tables.Messages
-import org.penakelex.database.tables.MessagesAttachments
-import org.penakelex.database.tables.Users
+import org.penakelex.database.tables.*
 import org.penakelex.response.Result
 
 class MessagesServiceImplementation : TableService(), MessagesService {
     override suspend fun insertNewMessage(
         senderID: Int,
-        message: MessageSend
+        message: MessageSend,
+        participants: List<Int>
     ): Pair<Result, Long?> = databaseQuery {
-        val isUserNotAParticipantOfTheChat = ChatsParticipants.select {
+        val isUserParticipantOfTheChat = ChatsParticipants.select {
             ChatsParticipants.chat_id.eq(message.chatID) and ChatsParticipants.participant_id.eq(senderID)
-        }.singleOrNull() == null
-        if (isUserNotAParticipantOfTheChat) {
+        }.singleOrNull() != null
+        val isUserParticipantOfTheDialog = Dialogs.select {
+            Dialogs.first.eq(senderID) or Dialogs.second.eq(senderID)
+        }.singleOrNull() != null
+        if (!isUserParticipantOfTheChat && !isUserParticipantOfTheDialog) {
             return@databaseQuery Result.YOU_CAN_NOT_SEND_MESSAGES_IN_THIS_CHAT to null
         }
         val messageID = Messages.insertAndGetId {
-            it[chat_id] = message.chatID
+            if (isUserParticipantOfTheChat) it[chat_id] = message.chatID
+            else it[dialog_id] = message.chatID
             it[sender_id] = senderID
             it[body] = message.body
             it[timestamp] = message.timestamp
@@ -40,7 +42,7 @@ class MessagesServiceImplementation : TableService(), MessagesService {
 
     override suspend fun getAllMessages(chatID: Long): Pair<Result, List<Message>?> = databaseQuery {
         val messages = Messages.select {
-            Messages.chat_id.eq(chatID)
+            Messages.chat_id.eq(chatID) or Messages.dialog_id.eq(chatID)
         }.toList()
         val messagesSenders = Users
             .slice(Users.id, Users.name, Users.avatar).select {

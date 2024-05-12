@@ -103,15 +103,16 @@ class ChatsControllerImplementation(
             chatID = sentMessage.chatID
         )
         if (gettingChatParticipantsResult != Result.OK) return
+        chatParticipants as List<Int>
         val (messageInsertResult, messageID) = service.messagesService.insertNewMessage(
-            senderID = senderID, message = sentMessage
+            senderID = senderID, message = sentMessage, participants = chatParticipants
         )
         if (messageInsertResult != Result.OK) return
         val (gettingNameAndAvatarResult, senderNameAndAvatar) =
             service.usersService.getUserNameAndAvatar(userID = senderID)
         if (gettingNameAndAvatarResult != Result.OK) return
         sendToClients(
-            chatParticipants = chatParticipants!!.toSet(),
+            chatParticipants = chatParticipants.toSet(),
             message = Json.encodeToString(
                 serializer = Message.serializer(),
                 value = Message(
@@ -136,13 +137,14 @@ class ChatsControllerImplementation(
             chatID = updatedMessage.chatID
         )
         if (gettingChatParticipantsResult != Result.OK) return
+        chatParticipants as List<Int>
         val messageUpdateResult = service.messagesService.updateMessage(
             message = updatedMessage,
             updaterID = updaterID
         )
         if (messageUpdateResult != Result.OK) return
         sendToClients(
-            chatParticipants = chatParticipants!!.toSet(),
+            chatParticipants = chatParticipants.toSet(),
             message = Json.encodeToString(
                 MessageUpdated.serializer(),
                 MessageUpdated(
@@ -157,24 +159,21 @@ class ChatsControllerImplementation(
         deleterID: Int,
         deletedMessage: MessageDelete
     ) {
-        try {
-            val (gettingChatParticipantsResult, chatParticipants) = service.chatsService.getChatParticipants(
-                chatID = deletedMessage.chatID
-            )
-            if (gettingChatParticipantsResult != Result.OK) return
-            val (messageDeleteResult, attachment) = service.messagesService.deleteMessage(
-                messageID = deletedMessage.messageID,
-                deleterID = deleterID
-            )
-            if (messageDeleteResult != Result.OK) return
-            if (attachment != null) fileManager.deleteFiles(listOf(attachment))
-            sendToClients(
-                chatParticipants = chatParticipants!!.toSet(),
-                message = "${deletedMessage.messageID}"
-            )
-        } catch (exception: Exception) {
-            exception.printStackTrace()
-        }
+        val (gettingChatParticipantsResult, chatParticipants) = service.chatsService.getChatParticipants(
+            chatID = deletedMessage.chatID
+        )
+        if (gettingChatParticipantsResult != Result.OK) return
+        chatParticipants as List<Int>
+        val (messageDeleteResult, attachment) = service.messagesService.deleteMessage(
+            messageID = deletedMessage.messageID,
+            deleterID = deleterID
+        )
+        if (messageDeleteResult != Result.OK) return
+        if (attachment != null) fileManager.deleteFiles(listOf(attachment))
+        sendToClients(
+            chatParticipants = chatParticipants.toSet(),
+            message = "${deletedMessage.messageID}"
+        )
     }
 
     private suspend fun sendToClients(
@@ -245,7 +244,8 @@ class ChatsControllerImplementation(
         if (gettingChatParticipantsResult != Result.OK) {
             return call.response.status(gettingChatParticipantsResult.toHttpStatusCode())
         }
-        if (userID !in participants!!) {
+        participants as List<Int>
+        if (userID !in participants) {
             return call.response.status(Result.YOU_ARE_NOT_PARTICIPANT_OF_THIS_CHAT.toHttpStatusCode())
         }
         val (gettingAllMessagesResult, messages) = service.messagesService.getAllMessages(
