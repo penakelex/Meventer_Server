@@ -9,4 +9,5 @@ object Dialogs : Table("dialogs") {
         .references(Users.id, onDelete = ReferenceOption.CASCADE)
     val second = integer("second")
         .references(Users.id, onDelete = ReferenceOption.CASCADE)
+    override val primaryKey = PrimaryKey(id)
 }

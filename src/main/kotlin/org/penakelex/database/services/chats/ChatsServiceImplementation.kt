@@ -112,7 +112,8 @@ class ChatsServiceImplementation : TableService(), ChatsService {
                 )
             }.associate { it[Users.id].value to it[Users.name] }
         val chatsLastMessages = Messages.select {
-            Messages.chat_id.inList(chatsIDs.plus(dialogs.map { it[Dialogs.id] }))
+            Messages.chat_id.inList(chatsIDs) or
+                    Messages.dialog_id.inList(dialogs.map { it[Dialogs.id] })
         }.orderBy(Messages.timestamp to SortOrder.DESC).toList()
         val messagesSenders = Users
             .slice(Users.id, Users.name, Users.avatar).select {
@@ -130,6 +131,7 @@ class ChatsServiceImplementation : TableService(), ChatsService {
         val lastMessages = buildMap<Long, List<Message>> {
             for (chatMessage in chatsLastMessages) {
                 val chatID = chatMessage[Messages.chat_id]
+                    ?: chatMessage[Messages.dialog_id] as Long
                 val lastMessages = getOrDefault(chatID, listOf())
                 if (lastMessages.size > 3) continue
                 val senderID = chatMessage[Messages.sender_id]
